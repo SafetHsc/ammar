@@ -1,0 +1,144 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+  background-color: white; /* Background color */
+}
+
+/* Header styles */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #333; /* Header color */
+  color: white; /* Clock color */
+  padding: 20px;
+  height: 60px;
+}
+
+/* Left side: Logo and Company name */
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  height: 60px; /* Adjust as needed */
+  margin-right: 10px;
+}
+
+/* Center: Clock */
+.header-center {
+  font-size: 2rem;
+  text-align: center;
+}
+
+.clock {
+  font-size: 4rem;
+  margin: 0;
+}
+
+/* Right side: Login button */
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.login-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.login-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Card container and card styles */
+.card-container {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-gap: 20px; /* Increased gap for better spacing between cards */
+  padding: 20px; /* Padding around the grid */
+  margin: 0 auto;
+  height: calc(100vh - 80px); /* Full viewport height minus header */
+}
+
+/* Card Styles */
+.card {
+  display: flex; /* Arrange icon and info side by side */
+  align-items: center;
+  background-color: white;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  text-align: left;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+  height: 35vh; /* Allow card to grow based on content */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: add a slight shadow for depth */
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card-detail {
+  text-align: center;
+  margin-top: 50px;
+}
+
+a {
+  text-decoration: none;
+  color: #007bff;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Temperature icon styles */
+.temp-icon {
+  width: 50px; /* Adjust as needed */
+  height: 50px;
+  margin-right: 15px; /* Space between icon and text */
+}
+
+/* Temperature info */
+.temp-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 20px;
+}
+
+/* Temperature list */
+.temp-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.temp-list li {
+  font-size: 1rem;
+  margin: 4px 0; /* Space between temperature fields */
+}
+
+/* Media Queries for Responsive Design */
+@media (max-width: 768px) {
+  .card-container {
+    grid-template-columns: repeat(2, 1fr); /* Two cards per row on tablets */
+  }
+}
+
+@media (max-width: 480px) {
+  .card-container {
+    grid-template-columns: 1fr; /* One card per row on mobile */
+  }
+}
