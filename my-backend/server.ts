@@ -28,7 +28,7 @@ db.connect((err) => {
 
 // Endpoint to fetch temperature data for cards
 app.get('/api/cards', async (req, res) => {
-    const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature FROM kade';
+    const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature FROM cards'; // Updated to correct table name
 
     try {
         const [results] = await db.promise().query(query);
