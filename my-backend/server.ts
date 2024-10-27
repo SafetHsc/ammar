@@ -23,7 +23,7 @@ db.getConnection()
     .catch((err) => console.error('Database connection failed:', (err as Error).message));
 
 // Endpoint to fetch temperature data for cards
-app.get('/api/cards', async (req, res) => {
+app.get('/api/cards', async (_req, res) => {
     const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature FROM cards';
 
     try {
@@ -36,7 +36,7 @@ app.get('/api/cards', async (req, res) => {
 });
 
 // Endpoint to fetch user data (for login)
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', async (_req, res) => {
     const query = 'SELECT id, username, password FROM users';
 
     try {
