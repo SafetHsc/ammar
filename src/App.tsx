@@ -41,19 +41,22 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
     const cardName = id === 10 ? 'BAIC' : `KADA ${id}`;
 
     return (
-        <Link to={`/card/${id}`} className="card">
+        <div className="card">
             <img src="https://media.istockphoto.com/id/940049422/vector/temperature-level-heat-levels-icon.jpg?s=612x612&w=0&k=20&c=fEnixZAdq3zCWTJBcbncjOBVi-UVb1ZuHsF5AYQWZ2I=" alt="Temperature Icon" className="temp-icon" />
             <div className="temp-info">
-                <h3>{cardName}</h3>
+                <Link to={`/card/${id}`}>
+                    <h3 style={{marginLeft:"20px"}}>{cardName}</h3>
+                </Link>
                 <ul className="temp-list">
-                    <li>Top Temp: {topTemperature !== null ? `${topTemperature}°C` : 'Loading...'}</li>
-                    <li>Current Temp: {currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</li>
-                    <li>Bottom Temp: {bottomTemperature !== null ? `${bottomTemperature}°C` : 'Loading...'}</li>
+                    <li> <span className="top-temp">Najviša Temperatura:</span> {topTemperature !== null ? `${topTemperature}°C` : 'Loading...'}</li>
+                    <li> <span className="current-temp">Trenutna Temperatura:</span> {currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</li>
+                    <li> <span className="bottom-temp">Donja Temperatura:</span> {bottomTemperature !== null ? `${bottomTemperature}°C` : 'Loading...'}</li>
                 </ul>
             </div>
-        </Link>
+        </div>
     );
 };
+
 
 const CardDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
