@@ -35,6 +35,25 @@ app.get('/api/cards', async (_req, res) => {
     }
 });
 
+// Endpoint to fetch temperature data for a specific card by ID
+app.get('/api/cards/:id', async (req, res) => {
+    const { id } = req.params; // Get the card ID from the request parameters
+    const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature FROM cards WHERE id = ?';
+
+    try {
+        const [results]: [RowDataPacket[], any] = await db.query(query, [id]);
+
+        if (results.length > 0) {
+            res.json(results[0]); // Return the first (and ideally only) result
+        } else {
+            res.status(404).json({ message: 'Card not found' });
+        }
+    } catch (error) {
+        console.error('Error executing query:', (error as Error).message);
+        res.status(500).json({ error: 'Database query failed' });
+    }
+});
+
 // Endpoint to fetch user data (for login)
 app.get('/api/users', async (_req, res) => {
     const query = 'SELECT id, username, password FROM users';
@@ -70,7 +89,6 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ success: false, message: 'An error occurred while processing your request' });
     }
 });
-
 
 // Start the server
 app.listen(port, () => {

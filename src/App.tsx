@@ -75,11 +75,11 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
         <div className="card" onClick={handleClick}>
             <img src="https://media.istockphoto.com/id/940049422/vector/temperature-level-heat-levels-icon.jpg?s=612x612&w=0&k=20&c=fEnixZAdq3zCWTJBcbncjOBVi-UVb1ZuHsF5AYQWZ2I=" alt="Temperature Icon" className="temp-icon" />
             <div className="temp-info">
-                <h3 style={{ marginLeft: "20px", paddingTop:"15px", fontSize:"22px"}}>{cardName}</h3>
+                <h3 style={{ marginLeft: "20px", paddingTop: "15px", fontSize: "22px" }}>{cardName}</h3>
                 <ul className="temp-list">
                     <li><span className="top-temp">Najviša Temperatura:</span> {topTemperature !== null ? `${topTemperature}°C` : 'Loading...'}</li>
                     <li><span className="current-temp">Trenutna Temperatura:</span>
-                        <p style={{fontSize:"35px", marginTop:"8px", marginBottom:"10px"}}>{currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</p></li>
+                        <p style={{ fontSize: "35px", marginTop: "8px", marginBottom: "10px" }}>{currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</p></li>
                     <li><span className="bottom-temp">Donja Temperatura:</span> {bottomTemperature !== null ? `${bottomTemperature}°C` : 'Loading...'}</li>
                 </ul>
             </div>
@@ -87,15 +87,48 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
     );
 };
 
+// CardDetail component to fetch data by ID
 const CardDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const [cardData, setCardData] = useState<TemperatureData | null>(null); // Store fetched data
+    const [loading, setLoading] = useState(true); // Loading state
+
+    useEffect(() => {
+        const fetchCardData = async () => {
+            try {
+                const response = await fetch(`http://localhost:5174/api/cards/${id}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data: TemperatureData = await response.json();
+                setCardData(data); // Set the fetched data
+            } catch (error) {
+                console.error('Error fetching card data:', error);
+            } finally {
+                setLoading(false); // Set loading to false after fetching
+            }
+        };
+
+        fetchCardData();
+    }, [id]);
+
+    if (loading) {
+        return <p>Loading...</p>; // Show loading message
+    }
+
+    if (!cardData) {
+        return <p>No data found.</p>; // Handle case where data is not found
+    }
+
     const cardName = id === '10' ? 'BAIC' : `KADA ${id}`;
 
     return (
         <div className="card-detail">
-            <h2>{cardName} Details</h2>
-            <p>This is the detail page for {cardName}.</p>
-            <Link to="/">Back to Home</Link>
+            <h2>{cardName} - Kontrola Temperatura</h2>
+            <p>Najviša Temperatura: {cardData.topTemperature}°C</p>
+            <p>Trenutna Temperatura: {cardData.currentTemperature}°C</p>
+            <p>Donja Temperatura: {cardData.bottomTemperature}°C</p>
+            <Link to="/">Nazad</Link>
         </div>
     );
 };
@@ -171,7 +204,7 @@ const App: React.FC = () => {
                 sessionStorage.setItem('role', result.role);
                 navigate('/'); // Redirect to homepage
             } else {
-               alert('Prijava neuspješna. Unesite ispravne podatke.');
+                alert('Prijava neuspješna. Unesite ispravne podatke.');
             }
         } else {
             alert('Prijava neuspješna. Unesite ispravne podatke.');
