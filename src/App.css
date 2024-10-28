@@ -18,7 +18,7 @@ html, body {
   background-color: #333; /* Header color */
   color: white; /* Clock color */
   padding: 20px;
-  height: 60px; /* Fixed height for header */
+  height: 40px; /* Fixed height for header */
 }
 
 /* Left side: Logo and Company name */

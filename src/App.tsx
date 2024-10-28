@@ -75,10 +75,11 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
         <div className="card" onClick={handleClick}>
             <img src="https://media.istockphoto.com/id/940049422/vector/temperature-level-heat-levels-icon.jpg?s=612x612&w=0&k=20&c=fEnixZAdq3zCWTJBcbncjOBVi-UVb1ZuHsF5AYQWZ2I=" alt="Temperature Icon" className="temp-icon" />
             <div className="temp-info">
-                <h3 style={{ marginLeft: "20px" }}>{cardName}</h3>
+                <h3 style={{ marginLeft: "20px", paddingTop:"15px", fontSize:"22px"}}>{cardName}</h3>
                 <ul className="temp-list">
                     <li><span className="top-temp">Najviša Temperatura:</span> {topTemperature !== null ? `${topTemperature}°C` : 'Loading...'}</li>
-                    <li><span className="current-temp">Trenutna Temperatura:</span> {currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</li>
+                    <li><span className="current-temp">Trenutna Temperatura:</span>
+                        <p style={{fontSize:"35px", marginTop:"8px", marginBottom:"10px"}}>{currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</p></li>
                     <li><span className="bottom-temp">Donja Temperatura:</span> {bottomTemperature !== null ? `${bottomTemperature}°C` : 'Loading...'}</li>
                 </ul>
             </div>
@@ -182,7 +183,7 @@ const App: React.FC = () => {
         setRole(null);
         sessionStorage.removeItem('isLoggedIn');
         sessionStorage.removeItem('role');
-        navigate('/login');
+        navigate('/');
     };
 
     return (
