@@ -148,6 +148,14 @@ a:hover {
   color: blue; /* Change to your desired color */
 }
 
+.db-crash {
+  text-align: center;
+  margin: auto;
+  width: 100rem;
+  font-size:25px;
+  color: red;
+}
+
 .login-page {
   display: flex;
   flex-direction: column;

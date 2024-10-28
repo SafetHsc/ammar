@@ -203,7 +203,9 @@ const App: React.FC = () => {
                                 />
                             ))
                         ) : (
-                            <p>Loading temperature data...</p>
+                            <p className="db-crash">
+                                Provjerite konekciju sa bazom!
+                            </p>
                         )}
                     </div>
                 </div>
