@@ -59,7 +59,9 @@ app.post('/api/login', async (req, res) => {
 
         // Check if any user matches
         if (results.length > 0) {
-            res.json({ success: true });
+            const user = results[0];
+            const isAdmin = user.id === 1;
+            res.json({ success: true, id: user.id, role: isAdmin ? 1 : 2 });
         } else {
             res.status(401).json({ success: false, message: 'Prijava neuspješna. Unesite ispravne podatke.' });
         }
@@ -68,6 +70,7 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ success: false, message: 'An error occurred while processing your request' });
     }
 });
+
 
 // Start the server
 app.listen(port, () => {

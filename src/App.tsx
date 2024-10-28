@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import './App.css';
 
 // Header component
-const Header: React.FC = () => {
-    const [currentTime, setCurrentTime] = useState<string>("");
+const Header: React.FC<{ isLoggedIn: boolean; role: number | null; onLogout: () => void }> = ({ isLoggedIn, role, onLogout }) => {
+    const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString([], { hour12: false }));
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            const time = new Date().toLocaleTimeString([], { hour12: false });
-            setCurrentTime(time);
-        }, 1000);
+        const updateTime = () => {
+            setCurrentTime(new Date().toLocaleTimeString([], { hour12: false }));
+        };
 
+        const timer = setInterval(updateTime, 1000);
         return () => clearInterval(timer);
     }, []);
 
@@ -24,9 +24,29 @@ const Header: React.FC = () => {
                 <h2 className="clock">{currentTime}</h2>
             </div>
             <div className="header-right">
-                <Link to="/login">
-                    <button className="login-btn">PRIJAVA</button>
-                </Link>
+                {isLoggedIn ? (
+                    <>
+                        {role === 1 ? (
+                            <>
+                                <Link to="/logovi">
+                                    <button className="logs-btn">SVI LOGOVI</button>
+                                </Link>
+                                <Link to="/log">
+                                    <button className="daily-log-btn">DANAŠNJI LOG</button>
+                                </Link>
+                            </>
+                        ) : (
+                            <Link to="/log">
+                                <button className="daily-log-btn">DANAŠNJI LOG</button>
+                            </Link>
+                        )}
+                        <button className="logout-btn" onClick={onLogout}>LOG OUT</button>
+                    </>
+                ) : (
+                    <Link to="/login">
+                        <button className="login-btn">PRIJAVA</button>
+                    </Link>
+                )}
             </div>
         </header>
     );
@@ -37,18 +57,25 @@ interface CardProps {
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
+    isLoggedIn: boolean;
 }
 
-const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature }) => {
+const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature, isLoggedIn }) => {
     const cardName = id === 10 ? 'BAIC' : `KADA ${id}`;
 
+    const handleClick = () => {
+        if (isLoggedIn) {
+            window.location.href = `/card/${id}`;
+        } else {
+            alert('Molimo vas, prijavite se za pristup detaljima.');
+        }
+    };
+
     return (
-        <div className="card">
+        <div className="card" onClick={handleClick}>
             <img src="https://media.istockphoto.com/id/940049422/vector/temperature-level-heat-levels-icon.jpg?s=612x612&w=0&k=20&c=fEnixZAdq3zCWTJBcbncjOBVi-UVb1ZuHsF5AYQWZ2I=" alt="Temperature Icon" className="temp-icon" />
             <div className="temp-info">
-                <Link to={`/card/${id}`}>
-                    <h3 style={{ marginLeft: "20px" }}>{cardName}</h3>
-                </Link>
+                <h3 style={{ marginLeft: "20px" }}>{cardName}</h3>
                 <ul className="temp-list">
                     <li><span className="top-temp">Najviša Temperatura:</span> {topTemperature !== null ? `${topTemperature}°C` : 'Loading...'}</li>
                     <li><span className="current-temp">Trenutna Temperatura:</span> {currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</li>
@@ -72,6 +99,16 @@ const CardDetail: React.FC = () => {
     );
 };
 
+const InvalidLink: React.FC = () => {
+    return (
+        <div className="invalid-link">
+            <h2>Invalid Link</h2>
+            <p>You do not have permission to access this page.</p>
+            <Link to="/">Go back to Home</Link>
+        </div>
+    );
+};
+
 interface TemperatureData {
     id: number;
     topTemperature: number | null;
@@ -79,50 +116,41 @@ interface TemperatureData {
     bottomTemperature: number | null;
 }
 
-const HomePage: React.FC = () => {
-    const [temperatureData, setTemperatureData] = useState<TemperatureData[]>([]);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await fetch('http://localhost:5174/api/cards');
-                if (!response.ok) {
-                    console.error('Network response was not ok');
-                    return;
-                }
-                const fetchedData: TemperatureData[] = await response.json();
-                setTemperatureData(fetchedData);
-            } catch (error) {
-                console.error('Error fetching temperature data:', error);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    return (
-        <div>
-            <Header />
-            <div className="card-container">
-                {temperatureData.map(({ id, topTemperature, currentTemperature, bottomTemperature }) => (
-                    <Card
-                        key={id}
-                        id={id}
-                        topTemperature={topTemperature}
-                        currentTemperature={currentTemperature}
-                        bottomTemperature={bottomTemperature}
-                    />
-                ))}
-            </div>
-        </div>
-    );
-};
-
-// Login Page component
-const LoginPage: React.FC = () => {
+const App: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [role, setRole] = useState<number | null>(null);
+    const [temperatureData, setTemperatureData] = useState<TemperatureData[]>([]);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const loggedIn = sessionStorage.getItem('isLoggedIn');
+        const userRole = sessionStorage.getItem('role');
+        if (loggedIn === 'true') {
+            setIsLoggedIn(true);
+            setRole(Number(userRole));
+        }
+    }, []);
+
+    const fetchTemperatureData = async () => {
+        try {
+            const response = await fetch('http://localhost:5174/api/cards');
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const fetchedData: TemperatureData[] = await response.json();
+            setTemperatureData(fetchedData);
+        } catch (error) {
+            console.error('Error fetching temperature data:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchTemperatureData();
+        const interval = setInterval(fetchTemperatureData, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -133,48 +161,95 @@ const LoginPage: React.FC = () => {
             body: JSON.stringify({ username, password }),
         });
 
-        // Handle success and failure responses
         if (response.ok) {
             const result = await response.json();
             if (result.success) {
-                // Handle successful login, e.g., set user state, redirect to homepage
+                setIsLoggedIn(true);
+                setRole(result.role);
+                sessionStorage.setItem('isLoggedIn', 'true');
+                sessionStorage.setItem('role', result.role);
                 navigate('/'); // Redirect to homepage
             } else {
-                alert('Prijava neuspješna. Unesite ispravne podatke.');
+               alert('Prijava neuspješna. Unesite ispravne podatke.');
             }
         } else {
-            alert('Prijava neuspješna. Unesite ispravne podatke.'); // Handle server error
+            alert('Prijava neuspješna. Unesite ispravne podatke.');
         }
     };
 
-    return (
-        <div className="login-page">
-            <h2>Prijava</h2>
-            <form onSubmit={handleLogin}>
-                <div>
-                    <label>Korisnik:</label>
-                    <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required />
-                </div>
-                <div>
-                    <label>Lozinka:</label>
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                </div>
-                <button type="submit">Prijavi Se</button>
-            </form>
-            <Link to="/">Nazad</Link>
-        </div>
-    );
-};
+    const handleLogout = () => {
+        setIsLoggedIn(false);
+        setRole(null);
+        sessionStorage.removeItem('isLoggedIn');
+        sessionStorage.removeItem('role');
+        navigate('/login');
+    };
 
-const App: React.FC = () => {
     return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/card/:id" element={<CardDetail />} />
-                <Route path="/login" element={<LoginPage />} />
-            </Routes>
-        </Router>
+        <Routes>
+            <Route path="/" element={
+                <div>
+                    <Header isLoggedIn={isLoggedIn} role={role} onLogout={handleLogout} />
+                    <div className="card-container">
+                        {temperatureData.length > 0 ? (
+                            temperatureData.map(({ id, topTemperature, currentTemperature, bottomTemperature }) => (
+                                <Card
+                                    key={id}
+                                    id={id}
+                                    topTemperature={topTemperature}
+                                    currentTemperature={currentTemperature}
+                                    bottomTemperature={bottomTemperature}
+                                    isLoggedIn={isLoggedIn}
+                                />
+                            ))
+                        ) : (
+                            <p>Loading temperature data...</p>
+                        )}
+                    </div>
+                </div>
+            } />
+            <Route path="/card/:id" element={<CardDetail />} />
+            <Route path="/login" element={
+                <div className="login-page">
+                    <h2>Prijava</h2>
+                    <form onSubmit={handleLogin}>
+                        <div>
+                            <label>Korisnik:</label>
+                            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                        </div>
+                        <div>
+                            <label>Lozinka:</label>
+                            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        </div>
+                        <button type="submit">Prijavi Se</button>
+                    </form>
+                    <Link to="/">Nazad</Link>
+                </div>
+            } />
+            <Route path="/logovi" element={
+                isLoggedIn && role === 1 ? (
+                    <div>
+                        <h2>Admin Logovi</h2>
+                        <p>This is the admin logs page.</p>
+                        {/* Add your admin content here */}
+                    </div>
+                ) : (
+                    <InvalidLink />
+                )
+            } />
+            <Route path="/log" element={
+                isLoggedIn ? (
+                    <div>
+                        <h2>User Log</h2>
+                        <p>This is the user logs page.</p>
+                        {/* Add your user content here */}
+                    </div>
+                ) : (
+                    <InvalidLink />
+                )
+            } />
+            <Route path="*" element={<InvalidLink />} />
+        </Routes>
     );
 };
 
