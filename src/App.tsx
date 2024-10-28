@@ -88,10 +88,14 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
 };
 
 // CardDetail component to fetch data by ID
-const CardDetail: React.FC = () => {
+const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const { id } = useParams<{ id: string }>();
-    const [cardData, setCardData] = useState<TemperatureData | null>(null); // Store fetched data
-    const [loading, setLoading] = useState(true); // Loading state
+    const [cardData, setCardData] = useState<TemperatureData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [topTemperature, setTopTemperature] = useState<number | null>(null);
+    const [currentTemperature, setCurrentTemperature] = useState<number | null>(null);
+    const [bottomTemperature, setBottomTemperature] = useState<number | null>(null);
+    const [message, setMessage] = useState<string>('');
 
     useEffect(() => {
         const fetchCardData = async () => {
@@ -101,37 +105,114 @@ const CardDetail: React.FC = () => {
                     throw new Error('Network response was not ok');
                 }
                 const data: TemperatureData = await response.json();
-                setCardData(data); // Set the fetched data
+                setCardData(data);
+                setTopTemperature(data.topTemperature);
+                setCurrentTemperature(data.currentTemperature);
+                setBottomTemperature(data.bottomTemperature);
             } catch (error) {
                 console.error('Error fetching card data:', error);
             } finally {
-                setLoading(false); // Set loading to false after fetching
+                setLoading(false);
             }
         };
 
         fetchCardData();
     }, [id]);
 
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const updatedData = {
+            id: Number(id),
+            topTemperature,
+            currentTemperature,
+            bottomTemperature,
+        };
+
+        // If user is not logged in, prevent update
+        if (!isLoggedIn) {
+            alert('You must be logged in to update temperatures.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://localhost:5174/api/cards/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData),
+            });
+
+            if (response.ok) {
+                setMessage('Temperatures updated successfully!');
+                // Optionally, refetch the data to get the latest values
+                const updatedResponse = await fetch(`http://localhost:5174/api/cards/${id}`);
+                const updatedCardData: TemperatureData = await updatedResponse.json();
+                setCardData(updatedCardData);
+            } else {
+                setMessage('Failed to update temperatures.');
+            }
+        } catch (error) {
+            console.error('Error updating temperatures:', error);
+            setMessage('An error occurred while updating temperatures.');
+        }
+    };
+
     if (loading) {
-        return <p>Loading...</p>; // Show loading message
+        return <p>Loading...</p>;
     }
 
     if (!cardData) {
-        return <p>No data found.</p>; // Handle case where data is not found
+        return <p>No data found.</p>;
     }
 
     const cardName = id === '10' ? 'BAIC' : `KADA ${id}`;
 
     return (
         <div className="card-detail">
-            <h2>{cardName} - Kontrola Temperatura</h2>
+            <h2>{cardName} Details</h2>
             <p>Najviša Temperatura: {cardData.topTemperature}°C</p>
             <p>Trenutna Temperatura: {cardData.currentTemperature}°C</p>
             <p>Donja Temperatura: {cardData.bottomTemperature}°C</p>
-            <Link to="/">Nazad</Link>
+
+            {isLoggedIn && (
+                <form onSubmit={handleUpdate}>
+                    <h3>Update Temperatures</h3>
+                    <div>
+                        <label>Najviša Temperatura:</label>
+                        <input
+                            type="number"
+                            value={topTemperature !== null ? topTemperature : ''}
+                            onChange={(e) => setTopTemperature(Number(e.target.value))}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label>Trenutna Temperatura:</label>
+                        <input
+                            type="number"
+                            value={currentTemperature !== null ? currentTemperature : ''}
+                            onChange={(e) => setCurrentTemperature(Number(e.target.value))}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label>Donja Temperatura:</label>
+                        <input
+                            type="number"
+                            value={bottomTemperature !== null ? bottomTemperature : ''}
+                            onChange={(e) => setBottomTemperature(Number(e.target.value))}
+                            required
+                        />
+                    </div>
+                    <button type="submit">Update Temperatures</button>
+                </form>
+            )}
+            {!isLoggedIn && <p>You need to log in to update temperatures.</p>}
+            {message && <p>{message}</p>}
+            <Link to="/">Back to Home</Link>
         </div>
     );
 };
+
 
 const InvalidLink: React.FC = () => {
     return (
@@ -182,7 +263,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         fetchTemperatureData();
-        const interval = setInterval(fetchTemperatureData, 60000);
+        const interval = setInterval(fetchTemperatureData, 2000);
         return () => clearInterval(interval);
     }, []);
 
@@ -244,7 +325,9 @@ const App: React.FC = () => {
                     </div>
                 </div>
             } />
-            <Route path="/card/:id" element={<CardDetail />} />
+            <Route path="/card/:id" element={
+                <CardDetail isLoggedIn={isLoggedIn} />
+            } />
             <Route path="/login" element={
                 <div className="login-page">
                     <h2>Prijava</h2>

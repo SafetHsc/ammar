@@ -1,5 +1,5 @@
 import express from 'express';
-import mysql, { RowDataPacket } from 'mysql2/promise'; // Using mysql2/promise for async/await
+import mysql, { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import cors from 'cors';
 
 const app = express();
@@ -51,6 +51,26 @@ app.get('/api/cards/:id', async (req, res) => {
     } catch (error) {
         console.error('Error executing query:', (error as Error).message);
         res.status(500).json({ error: 'Database query failed' });
+    }
+});
+
+app.post('/api/cards/:id', async (req, res) => {
+    const { id } = req.params;
+    const { topTemperature, currentTemperature, bottomTemperature } = req.body;
+
+    const query = 'UPDATE cards SET topTemperature = ?, currentTemperature = ?, bottomTemperature = ? WHERE id = ?';
+
+    try {
+        const [result] = await db.query<ResultSetHeader>(query, [topTemperature, currentTemperature, bottomTemperature, id]);
+
+        if (result.affectedRows > 0) {
+            res.json({ success: true, message: 'Temperatures updated successfully.' });
+        } else {
+            res.status(404).json({ success: false, message: 'Card not found.' });
+        }
+    } catch (error) {
+        console.error('Error executing query:', (error as Error).message);
+        res.status(500).json({ success: false, message: 'Database update failed' });
     }
 });
 
