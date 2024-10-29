@@ -57,10 +57,11 @@ interface CardProps {
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
+    setTemperature: number | null;
     isLoggedIn: boolean;
 }
 
-const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature, isLoggedIn }) => {
+const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature, setTemperature, isLoggedIn }) => {
     const cardName = id === 10 ? 'BAIC' : `KADA ${id}`;
 
     const handleClick = () => {
@@ -75,11 +76,11 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
         <div className="card" onClick={handleClick}>
             <img src="https://media.istockphoto.com/id/940049422/vector/temperature-level-heat-levels-icon.jpg?s=612x612&w=0&k=20&c=fEnixZAdq3zCWTJBcbncjOBVi-UVb1ZuHsF5AYQWZ2I=" alt="Temperature Icon" className="temp-icon" />
             <div className="temp-info">
-                <h3 style={{ marginLeft: "20px", paddingTop: "15px", fontSize: "22px" }}>{cardName}</h3>
+                <h3 style={{ marginLeft: "15px", paddingTop: "15px", fontSize: "22px", marginBottom:"8px" }}>{cardName}</h3>
                 <ul className="temp-list">
                     <li><span className="top-temp">Najviša Temperatura:</span> {topTemperature !== null ? `${topTemperature}°C` : 'Loading...'}</li>
-                    <li><span className="current-temp">Trenutna Temperatura:</span>
-                        <p style={{ fontSize: "35px", marginTop: "8px", marginBottom: "10px" }}>{currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</p></li>
+                    <li><span className="set-temp">Zadana Temperatura:</span> {setTemperature !== null ? `${setTemperature}°C` : 'Loading...'}</li>
+                    <li><span className="current-temp">Trenutna Temperatura:</span> <p className="current-temp-broj">{currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</p></li>
                     <li><span className="bottom-temp">Donja Temperatura:</span> {bottomTemperature !== null ? `${bottomTemperature}°C` : 'Loading...'}</li>
                 </ul>
             </div>
@@ -95,6 +96,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const [topTemperature, setTopTemperature] = useState<number | null>(null);
     const [currentTemperature, setCurrentTemperature] = useState<number | null>(null);
     const [bottomTemperature, setBottomTemperature] = useState<number | null>(null);
+    const [setTemperature, setsetTemperature] = useState<number | null>(null);
     const [message, setMessage] = useState<string>('');
 
     useEffect(() => {
@@ -109,6 +111,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                 setTopTemperature(data.topTemperature);
                 setCurrentTemperature(data.currentTemperature);
                 setBottomTemperature(data.bottomTemperature);
+                setsetTemperature(data.setTemperature);
             } catch (error) {
                 console.error('Error fetching card data:', error);
             } finally {
@@ -126,6 +129,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
             topTemperature,
             currentTemperature,
             bottomTemperature,
+            setTemperature
         };
 
         // If user is not logged in, prevent update
@@ -168,10 +172,11 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
 
     return (
         <div className="card-detail">
-            <h2>{cardName} Details</h2>
+            <h2>{cardName} - Kontrola Temperatura</h2>
             <p>Najviša Temperatura: {cardData.topTemperature}°C</p>
             <p>Trenutna Temperatura: {cardData.currentTemperature}°C</p>
             <p>Donja Temperatura: {cardData.bottomTemperature}°C</p>
+            <p>Zadana Temperatura: {cardData.setTemperature}°C</p>
 
             {isLoggedIn && (
                 <form onSubmit={handleUpdate}>
@@ -186,11 +191,11 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                         />
                     </div>
                     <div>
-                        <label>Trenutna Temperatura:</label>
+                        <label>Postavi Temperaturu:</label>
                         <input
                             type="number"
-                            value={currentTemperature !== null ? currentTemperature : ''}
-                            onChange={(e) => setCurrentTemperature(Number(e.target.value))}
+                            value={setTemperature !== null ? setTemperature : ''}
+                            onChange={(e) => setsetTemperature(Number(e.target.value))}
                             required
                         />
                     </div>
@@ -229,6 +234,7 @@ interface TemperatureData {
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
+    setTemperature: number | null;
 }
 
 const App: React.FC = () => {
@@ -307,13 +313,14 @@ const App: React.FC = () => {
                     <Header isLoggedIn={isLoggedIn} role={role} onLogout={handleLogout} />
                     <div className="card-container">
                         {temperatureData.length > 0 ? (
-                            temperatureData.map(({ id, topTemperature, currentTemperature, bottomTemperature }) => (
+                            temperatureData.map(({ id, topTemperature, currentTemperature, bottomTemperature, setTemperature }) => (
                                 <Card
                                     key={id}
                                     id={id}
                                     topTemperature={topTemperature}
                                     currentTemperature={currentTemperature}
                                     bottomTemperature={bottomTemperature}
+                                    setTemperature={setTemperature}
                                     isLoggedIn={isLoggedIn}
                                 />
                             ))

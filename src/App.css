@@ -126,8 +126,9 @@ a:hover {
 /* Temperature list */
 .temp-list {
   list-style-type: none;
-  padding: 11px 0;
+  padding: 0 0;
   margin: 0;
+  margin-bottom: 20px;
 }
 
 .temp-list li {
@@ -140,8 +141,17 @@ a:hover {
   color: red; /* Change to your desired color */
 }
 
+.set-temp {
+  color:green;
+}
+
 .current-temp {
   color: #fcca03; /* Change to your desired color */
+}
+.current-temp-broj {
+  font-size: 35px;
+  margin-top: 8px;
+  margin-bottom: 10px;
 }
 
 .bottom-temp {
