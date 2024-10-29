@@ -93,11 +93,11 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const { id } = useParams<{ id: string }>();
     const [cardData, setCardData] = useState<TemperatureData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [topTemperature, setTopTemperature] = useState<number | null>(null);
-    const [currentTemperature, setCurrentTemperature] = useState<number | null>(null);
-    const [bottomTemperature, setBottomTemperature] = useState<number | null>(null);
-    const [setTemperature, setsetTemperature] = useState<number | null>(null);
-    const [message, setMessage] = useState<string>('');
+    const [topTemperature, setTopTemperature] = useState<string>(''); // Change to string
+    const [bottomTemperature, setBottomTemperature] = useState<string>(''); // Change to string
+    const [setTemperature, setSetTemperature] = useState<string>(''); // Change to string
+    const [existingTemperatures, setExistingTemperatures] = useState<TemperatureData | null>(null); // Store existing temperatures
+    const [message] = useState<string>('');  // extra param - setMessage
 
     useEffect(() => {
         const fetchCardData = async () => {
@@ -108,10 +108,12 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                 }
                 const data: TemperatureData = await response.json();
                 setCardData(data);
-                setTopTemperature(data.topTemperature);
-                setCurrentTemperature(data.currentTemperature);
-                setBottomTemperature(data.bottomTemperature);
-                setsetTemperature(data.setTemperature);
+                setExistingTemperatures(data); // Save existing temperatures
+
+                // Optionally set temperatures here if you want to fill them
+                setTopTemperature('');
+                setBottomTemperature('');
+                setSetTemperature('');
             } catch (error) {
                 console.error('Error fetching card data:', error);
             } finally {
@@ -124,12 +126,14 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Prepare updated data, using existing values if the input is unchanged
         const updatedData = {
             id: Number(id),
-            topTemperature,
-            currentTemperature,
-            bottomTemperature,
-            setTemperature
+            topTemperature: topTemperature ? Number(topTemperature) : existingTemperatures?.topTemperature,
+            bottomTemperature: bottomTemperature ? Number(bottomTemperature) : existingTemperatures?.bottomTemperature,
+            setTemperature: setTemperature ? Number(setTemperature) : existingTemperatures?.setTemperature,
+            currentTemperature: existingTemperatures?.currentTemperature
         };
 
         // If user is not logged in, prevent update
@@ -146,17 +150,22 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
             });
 
             if (response.ok) {
-                setMessage('Temperatures updated successfully!');
+                alert('Temperature uspješno promijenjene!');
                 // Optionally, refetch the data to get the latest values
                 const updatedResponse = await fetch(`http://localhost:5174/api/cards/${id}`);
                 const updatedCardData: TemperatureData = await updatedResponse.json();
                 setCardData(updatedCardData);
+                setExistingTemperatures(updatedCardData); // Update existing temperatures
+                // Reset form fields after successful update
+                setTopTemperature('');
+                setBottomTemperature('');
+                setSetTemperature('');
             } else {
-                setMessage('Failed to update temperatures.');
+                alert('Temperatura nije promijenjena.');
             }
         } catch (error) {
-            console.error('Error updating temperatures:', error);
-            setMessage('An error occurred while updating temperatures.');
+            console.error('Greška u ažuriranju temperatura:', error);
+            alert('Greška u ažuriranju temperatura.');
         }
     };
 
@@ -171,50 +180,70 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const cardName = id === '10' ? 'BAIC' : `KADA ${id}`;
 
     return (
-        <div className="card-detail">
-            <h2>{cardName} - Kontrola Temperatura</h2>
-            <p>Najviša Temperatura: {cardData.topTemperature}°C</p>
-            <p>Trenutna Temperatura: {cardData.currentTemperature}°C</p>
-            <p>Donja Temperatura: {cardData.bottomTemperature}°C</p>
-            <p>Zadana Temperatura: {cardData.setTemperature}°C</p>
+        <div style={{ padding: '2rem' }}>
+            <h2 style={{ textAlign: 'center' }}>{cardName} - Kontrola Temperatura</h2>
+            <div className="kont-temp">
+                <div className="kont-temp-left">
+                    <div className="card-detail" style={{textAlign: 'center', fontSize: '1.5rem'}}>
+                        <p><span style={{color: "red"}}>Najviša Temperatura:</span> {cardData.topTemperature}°C</p>
+                        <p><span style={{color: "green"}}>Zadana Temperatura:</span> {cardData.setTemperature}°C</p>
+                        <p><span style={{color: "#fcca03"}}>Trenutna Temperatura:</span> {cardData.currentTemperature}°C
+                        </p>
+                        <p><span style={{color: "blue"}}>Donja Temperatura:</span> {cardData.bottomTemperature}°C</p>
 
-            {isLoggedIn && (
-                <form onSubmit={handleUpdate}>
-                    <h3>Update Temperatures</h3>
-                    <div>
-                        <label>Najviša Temperatura:</label>
-                        <input
-                            type="number"
-                            value={topTemperature !== null ? topTemperature : ''}
-                            onChange={(e) => setTopTemperature(Number(e.target.value))}
-                            required
-                        />
                     </div>
-                    <div>
-                        <label>Postavi Temperaturu:</label>
-                        <input
-                            type="number"
-                            value={setTemperature !== null ? setTemperature : ''}
-                            onChange={(e) => setsetTemperature(Number(e.target.value))}
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label>Donja Temperatura:</label>
-                        <input
-                            type="number"
-                            value={bottomTemperature !== null ? bottomTemperature : ''}
-                            onChange={(e) => setBottomTemperature(Number(e.target.value))}
-                            required
-                        />
-                    </div>
-                    <button type="submit">Update Temperatures</button>
-                </form>
-            )}
-            {!isLoggedIn && <p>You need to log in to update temperatures.</p>}
-            {message && <p>{message}</p>}
-            <Link to="/">Back to Home</Link>
+                </div>
+
+                <div style={{flex: '1', maxWidth: '350px'}}>
+                {isLoggedIn && (
+                        <form className="temp-form" onSubmit={handleUpdate}>
+                            <h3 style={{ marginTop: "0", textAlign: "center", color: '#333' }}>Podešavanje Temperatura</h3>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Najviša Temperatura:</label>
+                                <input
+                                    className="top-temp-form"
+                                    type="number"
+                                    min={55}
+                                    max={100}
+                                    value={topTemperature}
+                                    onChange={(e) => setTopTemperature(e.target.value)}
+                                    placeholder="Može biti između 55-100"
+                                />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Zadaj Temperaturu:</label>
+                                <input
+                                    className="set-temp-form"
+                                    type="number"
+                                    min={50}
+                                    max={100}
+                                    value={setTemperature}
+                                    onChange={(e) => setSetTemperature(e.target.value)}
+                                    placeholder="Može biti između 55-100"
+                                />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Donja Temperatura:</label>
+                                <input
+                                    className="donja-temp-form"
+                                    type="number"
+                                    min={50}
+                                    max={60}
+                                    value={bottomTemperature}
+                                    onChange={(e) => setBottomTemperature(e.target.value)}
+                                    placeholder="Može biti između 50-60"
+                                />
+                            </div>
+                            <button className="temp-submit" type="submit">Promijeni</button>
+                        </form>
+                    )}
+                    {!isLoggedIn && <p>Morate biti prijavljeni za podešavanje temperatura.</p>}
+                    {message && <p>{message}</p>}
+                    <Link to="/" style={{ fontSize: "18px", marginTop: "20px" }}>Nazad</Link>
+                </div>
+            </div>
         </div>
+
     );
 };
 
@@ -278,8 +307,8 @@ const App: React.FC = () => {
 
         const response = await fetch('http://localhost:5174/api/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password}),
         });
 
         if (response.ok) {
@@ -310,10 +339,16 @@ const App: React.FC = () => {
         <Routes>
             <Route path="/" element={
                 <div>
-                    <Header isLoggedIn={isLoggedIn} role={role} onLogout={handleLogout} />
+                    <Header isLoggedIn={isLoggedIn} role={role} onLogout={handleLogout}/>
                     <div className="card-container">
                         {temperatureData.length > 0 ? (
-                            temperatureData.map(({ id, topTemperature, currentTemperature, bottomTemperature, setTemperature }) => (
+                            temperatureData.map(({
+                                id,
+                                topTemperature,
+                                currentTemperature,
+                                bottomTemperature,
+                                setTemperature
+                            }) => (
                                 <Card
                                     key={id}
                                     id={id}
@@ -331,10 +366,10 @@ const App: React.FC = () => {
                         )}
                     </div>
                 </div>
-            } />
+            }/>
             <Route path="/card/:id" element={
-                <CardDetail isLoggedIn={isLoggedIn} />
-            } />
+                <CardDetail isLoggedIn={isLoggedIn}/>
+            }/>
             <Route path="/login" element={
                 <div className="login-page">
                     <h2>Prijava</h2>

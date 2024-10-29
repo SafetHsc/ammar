@@ -168,11 +168,17 @@ a:hover {
 
 .login-page {
   display: flex;
+  text-align: center;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh; /* Full viewport height */
-  background-color: #f5f5f5; /* Same as body */
+  height: 50vh; /* Full viewport height */
+  max-width: 400px;
+  margin: 5rem auto;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  background-color: #f9f9f9;
 }
 
 .login-page h2 {
@@ -209,6 +215,73 @@ a:hover {
 
 .login-page button:hover {
   background-color: #0091ff; /* Darker green on hover */
+}
+
+.kont-temp {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 3rem;
+  gap: 10rem;
+}
+
+.kont-temp-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  max-width: 300px;
+}
+
+.temp-form {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  height: auto;
+  min-height: 300px;
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+.top-temp-form {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size:inherit;
+}
+
+.set-temp-form {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size:inherit;
+}
+
+.donja-temp-form {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: inherit;
+}
+
+.temp-submit {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.temp-submit:hover {
+  background-color: #0091ff;
 }
 
 .logout-btn {
