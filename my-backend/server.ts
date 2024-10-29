@@ -56,12 +56,12 @@ app.get('/api/cards/:id', async (req, res) => {
 
 app.post('/api/cards/:id', async (req, res) => {
     const { id } = req.params;
-    const { topTemperature, currentTemperature, bottomTemperature } = req.body;
+    const { topTemperature, currentTemperature, bottomTemperature, setTemperature } = req.body; // Include setTemperature in request body
 
-    const query = 'UPDATE cards SET topTemperature = ?, currentTemperature = ?, bottomTemperature, setTemperature = ? WHERE id = ?';
+    const query = 'UPDATE cards SET topTemperature = ?, currentTemperature = ?, bottomTemperature = ?, setTemperature = ? WHERE id = ?';
 
     try {
-        const [result] = await db.query<ResultSetHeader>(query, [topTemperature, currentTemperature, bottomTemperature, id]);
+        const [result] = await db.query<ResultSetHeader>(query, [topTemperature, currentTemperature, bottomTemperature, setTemperature, id]);
 
         if (result.affectedRows > 0) {
             res.json({ success: true, message: 'Temperatures updated successfully.' });
@@ -73,6 +73,7 @@ app.post('/api/cards/:id', async (req, res) => {
         res.status(500).json({ success: false, message: 'Database update failed' });
     }
 });
+
 
 // Endpoint to fetch user data (for login)
 app.get('/api/users', async (_req, res) => {
