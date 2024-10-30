@@ -74,7 +74,7 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
 
     return (
         <div className="card" onClick={handleClick}>
-            <img src="https://media.istockphoto.com/id/940049422/vector/temperature-level-heat-levels-icon.jpg?s=612x612&w=0&k=20&c=fEnixZAdq3zCWTJBcbncjOBVi-UVb1ZuHsF5AYQWZ2I=" alt="Temperature Icon" className="temp-icon" />
+            <img src="src/assets/termometar.jpg" alt="Temperature Icon" className="temp-icon" />
             <div className="temp-info">
                 <h3 style={{ marginLeft: "15px", paddingTop: "15px", fontSize: "22px", marginBottom:"8px" }}>{cardName}</h3>
                 <ul className="temp-list">
@@ -88,34 +88,64 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
     );
 };
 
-// CardDetail component to fetch data by ID
 const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const { id } = useParams<{ id: string }>();
     const [cardData, setCardData] = useState<TemperatureData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [topTemperature, setTopTemperature] = useState<string>(''); // Change to string
-    const [bottomTemperature, setBottomTemperature] = useState<string>(''); // Change to string
-    const [setTemperature, setSetTemperature] = useState<string>(''); // Change to string
-    const [existingTemperatures, setExistingTemperatures] = useState<TemperatureData | null>(null); // Store existing temperatures
-    const [message] = useState<string>('');  // extra param - setMessage
+    const [topTemperature, setTopTemperature] = useState<string>('');
+    const [bottomTemperature, setBottomTemperature] = useState<string>('');
+    const [setTemperature, setSetTemperature] = useState<string>('');
+    const [existingTemperatures, setExistingTemperatures] = useState<TemperatureData | null>(null);
+    const [message] = useState<string>('');
+
+    const [minTemperature, setMinTemperature] = useState<number>(50);
+    const [maxTemperature, setMaxTemperature] = useState<number>(100);
+
+    // @ts-ignore
+    const handleTopTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = Number(e.target.value);
+        // Ensure topTemperature is not less than setTemperature
+        if (setTemperature !== '' && value < Number(setTemperature)) {
+            alert(`Najviša temperatura ne može biti manja od zadane temperature ${setTemperature}°C.`);
+        } else {
+            setTopTemperature(value.toString());
+        }
+    };
+
+    // @ts-ignore
+    // noinspection JSUnusedLocalSymbols
+    const handleBottomTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = Number(e.target.value);
+        // Ensure bottomTemperature is not greater than setTemperature
+        if (setTemperature !== '' && value > Number(setTemperature)) {
+            alert(`Donja temperatura ne može biti veća od zadane temperature ${setTemperature}°C.`);
+        } else {
+            setBottomTemperature(value.toString());
+        }
+    };
 
     useEffect(() => {
         const fetchCardData = async () => {
             try {
                 const response = await fetch(`http://localhost:5174/api/cards/${id}`);
                 if (!response.ok) {
+                    // noinspection ExceptionCaughtLocallyJS
                     throw new Error('Network response was not ok');
                 }
                 const data: TemperatureData = await response.json();
                 setCardData(data);
-                setExistingTemperatures(data); // Save existing temperatures
 
-                // Optionally set temperatures here if you want to fill them
+                setExistingTemperatures(data);
+
+                setMinTemperature(data.bottomTemperature ?? 50);
+                setMaxTemperature(data.topTemperature ?? 100);
+
                 setTopTemperature('');
                 setBottomTemperature('');
                 setSetTemperature('');
+
             } catch (error) {
-                console.error('Error fetching card data:', error);
+                console.error('Greška u učitavanju podataka:', error);
             } finally {
                 setLoading(false);
             }
@@ -127,7 +157,15 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Prepare updated data, using existing values if the input is unchanged
+        if (setTemperature !== '') {
+            const updatedTemperature = Number(setTemperature);
+
+            if (updatedTemperature < minTemperature || updatedTemperature > maxTemperature) {
+                alert(`Temperatura mora biti između ${minTemperature}°C i ${maxTemperature}°C.`);
+                return;
+            }
+        }
+
         const updatedData = {
             id: Number(id),
             topTemperature: topTemperature ? Number(topTemperature) : existingTemperatures?.topTemperature,
@@ -136,7 +174,6 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
             currentTemperature: existingTemperatures?.currentTemperature
         };
 
-        // If user is not logged in, prevent update
         if (!isLoggedIn) {
             alert('You must be logged in to update temperatures.');
             return;
@@ -151,18 +188,28 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
 
             if (response.ok) {
                 alert('Temperature uspješno promijenjene!');
-                // Optionally, refetch the data to get the latest values
+
                 const updatedResponse = await fetch(`http://localhost:5174/api/cards/${id}`);
                 const updatedCardData: TemperatureData = await updatedResponse.json();
+
                 setCardData(updatedCardData);
-                setExistingTemperatures(updatedCardData); // Update existing temperatures
-                // Reset form fields after successful update
+                setExistingTemperatures(updatedCardData);
+
+                setMinTemperature(updatedCardData.bottomTemperature ?? 50); // Update minTemperature after submit
+                setMaxTemperature(updatedCardData.topTemperature ?? 100); // Update maxTemperature after submit
+
+                // Empties the numbers from form
                 setTopTemperature('');
                 setBottomTemperature('');
                 setSetTemperature('');
-            } else {
+                setCardData(updatedCardData);
+                setExistingTemperatures(updatedCardData);
+
+            }
+            else {
                 alert('Temperatura nije promijenjena.');
             }
+
         } catch (error) {
             console.error('Greška u ažuriranju temperatura:', error);
             alert('Greška u ažuriranju temperatura.');
@@ -187,27 +234,25 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                     <div className="card-detail" style={{textAlign: 'center', fontSize: '1.5rem'}}>
                         <p><span style={{color: "red"}}>Najviša Temperatura:</span> {cardData.topTemperature}°C</p>
                         <p><span style={{color: "green"}}>Zadana Temperatura:</span> {cardData.setTemperature}°C</p>
-                        <p><span style={{color: "#fcca03"}}>Trenutna Temperatura:</span> {cardData.currentTemperature}°C
-                        </p>
                         <p><span style={{color: "blue"}}>Donja Temperatura:</span> {cardData.bottomTemperature}°C</p>
-
+                        <p><span style={{color: "#fcca03"}}>Trenutna Temperatura:</span> {cardData.currentTemperature}°C</p>
                     </div>
                 </div>
 
                 <div style={{flex: '1', maxWidth: '350px'}}>
                 {isLoggedIn && (
-                        <form className="temp-form" onSubmit={handleUpdate}>
-                            <h3 style={{ marginTop: "0", textAlign: "center", color: '#333' }}>Podešavanje Temperatura</h3>
+                    <form className="temp-form" onSubmit={handleUpdate}>
+                        <h3 style={{ marginTop: "0", textAlign: "center", color: '#333' }}>Podešavanje Temperatura</h3>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem' }}>Najviša Temperatura:</label>
                                 <input
                                     className="top-temp-form"
                                     type="number"
-                                    min={55}
+                                    min={55} // Dynamic min Math.max(minTemperature, Number(setTemperature))
                                     max={100}
                                     value={topTemperature}
-                                    onChange={(e) => setTopTemperature(e.target.value)}
-                                    placeholder="Može biti između 55-100"
+                                    onChange={(e) => setTopTemperature(e.target.value)} //{handleTopTemperatureChange}
+                                    //placeholder={`Može biti do 100`} // ${minTemperature}
                                 />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
@@ -215,11 +260,11 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                                 <input
                                     className="set-temp-form"
                                     type="number"
-                                    min={50}
-                                    max={100}
+                                    min={minTemperature}
+                                    max={maxTemperature}
                                     value={setTemperature}
                                     onChange={(e) => setSetTemperature(e.target.value)}
-                                    placeholder="Može biti između 55-100"
+                                    placeholder={`Može biti između ${minTemperature}-${maxTemperature}`}
                                 />
                             </div>
                             <div style={{ marginBottom: '1rem' }}>
@@ -227,18 +272,20 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                                 <input
                                     className="donja-temp-form"
                                     type="number"
-                                    min={50}
-                                    max={60}
+                                    min={55}
+                                    max={80}
                                     value={bottomTemperature}
-                                    onChange={(e) => setBottomTemperature(e.target.value)}
-                                    placeholder="Može biti između 50-60"
+                                    onChange={(e) => setBottomTemperature(e.target.value)} //onChange={handleBottomTemperatureChange}
+                                    //placeholder={`Od 55 - zadane temp.`}
                                 />
                             </div>
                             <button className="temp-submit" type="submit">Promijeni</button>
-                        </form>
+                    </form>
                     )}
+
                     {!isLoggedIn && <p>Morate biti prijavljeni za podešavanje temperatura.</p>}
                     {message && <p>{message}</p>}
+
                     <Link to="/" style={{ fontSize: "18px", marginTop: "20px" }}>Nazad</Link>
                 </div>
             </div>
@@ -246,7 +293,6 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
 
     );
 };
-
 
 const InvalidLink: React.FC = () => {
     return (
@@ -287,6 +333,7 @@ const App: React.FC = () => {
         try {
             const response = await fetch('http://localhost:5174/api/cards');
             if (!response.ok) {
+                // noinspection ExceptionCaughtLocallyJS
                 throw new Error('Network response was not ok');
             }
             const fetchedData: TemperatureData[] = await response.json();

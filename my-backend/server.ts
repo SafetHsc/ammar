@@ -74,7 +74,6 @@ app.post('/api/cards/:id', async (req, res) => {
     }
 });
 
-
 // Endpoint to fetch user data (for login)
 app.get('/api/users', async (_req, res) => {
     const query = 'SELECT id, username, password FROM users';

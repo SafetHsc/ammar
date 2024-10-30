@@ -127,8 +127,7 @@ a:hover {
 .temp-list {
   list-style-type: none;
   padding: 0 0;
-  margin: 0;
-  margin-bottom: 20px;
+  margin: 0 0 20px 0;
 }
 
 .temp-list li {
