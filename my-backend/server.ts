@@ -3,7 +3,7 @@ import mysql, { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import cors from 'cors';
 
 const app = express();
-const port = 5174; // Set your backend port
+const port = 5174; // CHANGE IF NEEDED
 
 // Middleware
 app.use(cors());
@@ -54,6 +54,7 @@ app.get('/api/cards/:id', async (req, res) => {
     }
 });
 
+// Endpoint to set temperature data for a specific card by ID
 app.post('/api/cards/:id', async (req, res) => {
     const { id } = req.params;
     const { topTemperature, currentTemperature, bottomTemperature, setTemperature } = req.body; // Include setTemperature in request body
@@ -74,7 +75,7 @@ app.post('/api/cards/:id', async (req, res) => {
     }
 });
 
-// Endpoint to fetch user data (for login)
+// Endpoint to fetch user data (credentials able to log in)
 app.get('/api/users', async (_req, res) => {
     const query = 'SELECT id, username, password FROM users';
 
@@ -87,7 +88,7 @@ app.get('/api/users', async (_req, res) => {
     }
 });
 
-// Endpoint for user login
+// Endpoint for user login attempt (check if account exists in database)
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
