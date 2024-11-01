@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
+import grijacOn from "./assets/grijacON.png";
+import grijacOff from "./assets/grijacOff.jpg";
 import './App.css';
 
 // Header component
@@ -58,10 +60,11 @@ interface CardProps {
     currentTemperature: number | null;
     bottomTemperature: number | null;
     setTemperature: number | null;
+    elGrijac: number;
     isLoggedIn: boolean;
 }
 
-const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature, setTemperature, isLoggedIn }) => {
+const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature, setTemperature, elGrijac, isLoggedIn }) => {
     const cardName = id === 10 ? 'BAIC' : `KADA ${id}`;
 
     const handleClick = () => {
@@ -74,7 +77,7 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
 
     return (
         <div className="card" onClick={handleClick}>
-            <img src="src/assets/termometar.jpg" alt="Temperature Icon" className="temp-icon" />
+            <img src={elGrijac === 1 ? grijacOn : grijacOff} alt="Temperature Icon" className="temp-icon" />
             <div className="temp-info">
                 <h3 style={{ marginLeft: "15px", paddingTop: "15px", fontSize: "22px", marginBottom:"8px" }}>{cardName}</h3>
                 <ul className="temp-list">
@@ -310,6 +313,7 @@ interface TemperatureData {
     currentTemperature: number | null;
     bottomTemperature: number | null;
     setTemperature: number | null;
+    elGrijac: number;
 }
 
 const App: React.FC = () => {
@@ -394,7 +398,8 @@ const App: React.FC = () => {
                                 topTemperature,
                                 currentTemperature,
                                 bottomTemperature,
-                                setTemperature
+                                setTemperature,
+                                elGrijac
                             }) => (
                                 <Card
                                     key={id}
@@ -403,6 +408,7 @@ const App: React.FC = () => {
                                     currentTemperature={currentTemperature}
                                     bottomTemperature={bottomTemperature}
                                     setTemperature={setTemperature}
+                                    elGrijac={elGrijac}
                                     isLoggedIn={isLoggedIn}
                                 />
                             ))

@@ -24,7 +24,7 @@ db.getConnection()
 
 // Endpoint to fetch temperature data for cards
 app.get('/api/cards', async (_req, res) => {
-    const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature, setTemperature FROM cards';
+    const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature, setTemperature, elGrijac FROM cards';
 
     try {
         const [results] = await db.query(query);
@@ -38,7 +38,7 @@ app.get('/api/cards', async (_req, res) => {
 // Endpoint to fetch temperature data for a specific card by ID
 app.get('/api/cards/:id', async (req, res) => {
     const { id } = req.params; // Get the card ID from the request parameters
-    const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature, setTemperature FROM cards WHERE id = ?';
+    const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature, setTemperature, elGrijac FROM cards WHERE id = ?';
 
     try {
         const [results]: [RowDataPacket[], any] = await db.query(query, [id]);
@@ -57,12 +57,12 @@ app.get('/api/cards/:id', async (req, res) => {
 // Endpoint to set temperature data for a specific card by ID
 app.post('/api/cards/:id', async (req, res) => {
     const { id } = req.params;
-    const { topTemperature, currentTemperature, bottomTemperature, setTemperature } = req.body; // Include setTemperature in request body
+    const { topTemperature, currentTemperature, bottomTemperature, setTemperature, elGrijac } = req.body; // Include setTemperature in request body
 
-    const query = 'UPDATE cards SET topTemperature = ?, currentTemperature = ?, bottomTemperature = ?, setTemperature = ? WHERE id = ?';
+    const query = 'UPDATE cards SET topTemperature = ?, currentTemperature = ?, bottomTemperature = ?, setTemperature = ?, elGrijac = ? WHERE id = ?';
 
     try {
-        const [result] = await db.query<ResultSetHeader>(query, [topTemperature, currentTemperature, bottomTemperature, setTemperature, id]);
+        const [result] = await db.query<ResultSetHeader>(query, [topTemperature, currentTemperature, bottomTemperature, setTemperature, elGrijac, id]);
 
         if (result.affectedRows > 0) {
             res.json({ success: true, message: 'Temperatures updated successfully.' });
