@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import grijacOn from "./assets/grijacON.png";
 import grijacOff from "./assets/grijacOff.jpg";
+import LogsPage from "./Components/LogsPage.tsx";
 import './App.css';
 
 // Header component
@@ -300,9 +301,9 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
 const InvalidLink: React.FC = () => {
     return (
         <div className="invalid-link">
-            <h2>Invalid Link</h2>
-            <p>You do not have permission to access this page.</p>
-            <Link to="/">Go back to Home</Link>
+            <h2>Niste Prijavljeni</h2>
+            <p>Nemate odobrenje za pristup ovoj lokaciji!</p>
+            <Link to="/">Nazad</Link>
         </div>
     );
 };
@@ -442,10 +443,11 @@ const App: React.FC = () => {
             } />
             <Route path="/logovi" element={
                 isLoggedIn && role === 1 ? (
-                    <div>
+                    <div className="admin-log">
                         <h2>Admin Logovi</h2>
-                        <p>This is the admin logs page.</p>
-                        {/* Add your admin content here */}
+                        <p>Sadržaj u izradi</p>
+                        <Link to="/">Nazad</Link>
+                        <LogsPage/>
                     </div>
                 ) : (
                     <InvalidLink />
@@ -453,13 +455,14 @@ const App: React.FC = () => {
             } />
             <Route path="/log" element={
                 isLoggedIn ? (
-                    <div>
-                        <h2>User Log</h2>
-                        <p>This is the user logs page.</p>
+                    <div className="user-log">
+                        <h2>Korisnik Logovi</h2>
+                        <p>Sadržaj u izradi</p>
+                        <Link to="/">Nazad</Link>
                         {/* Add your user content here */}
                     </div>
                 ) : (
-                    <InvalidLink />
+                    <InvalidLink/>
                 )
             } />
             <Route path="*" element={<InvalidLink />} />
