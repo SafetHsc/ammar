@@ -287,7 +287,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                     </form>
                     )}
 
-                    {!isLoggedIn && <p>Morate biti prijavljeni za podešavanje temperatura.</p>}
+                    {!isLoggedIn && <p  style={{fontSize: "1.5rem"}}><b>Morate biti prijavljeni za podešavanje temperatura!</b></p>}
                     {message && <p>{message}</p>}
 
                     <Link to="/" style={{ fontSize: "18px", marginTop: "20px" }}>Nazad</Link>
