@@ -5,7 +5,7 @@ import grijacOff from "./assets/grijacOff.jpg";
 import LogsPage from "./Components/LogsPage.tsx";
 import './App.css';
 
-// Header component
+// Header
 const Header: React.FC<{ isLoggedIn: boolean; role: number | null; onLogout: () => void }> = ({ isLoggedIn, role, onLogout }) => {
     const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString([], { hour12: false }));
 
@@ -60,12 +60,12 @@ interface CardProps {
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
-    setTemperature: number | null;
+    // setTemperature: number | null;
     elGrijac: number;
     isLoggedIn: boolean;
 }
 
-const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature, setTemperature, elGrijac, isLoggedIn }) => {
+const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature, elGrijac, isLoggedIn }) => {
     const cardName = id === 10 ? 'BAIC' : `KADA ${id}`;
 
     const handleClick = () => {
@@ -83,9 +83,8 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
                 <h3 style={{ marginLeft: "15px", paddingTop: "15px", fontSize: "22px", marginBottom:"8px" }}>{cardName}</h3>
                 <ul className="temp-list">
                     <li><span className="top-temp">Najviša Temperatura:</span> {topTemperature !== null ? `${topTemperature}°C` : 'Loading...'}</li>
-                    <li><span className="set-temp">Zadana Temperatura:</span> {setTemperature !== null ? `${setTemperature}°C` : 'Loading...'}</li>
                     <li><span className="current-temp">Trenutna Temperatura:</span> <p className="current-temp-broj">{currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</p></li>
-                    <li><span className="bottom-temp">Donja Temperatura:</span> {bottomTemperature !== null ? `${bottomTemperature}°C` : 'Loading...'}</li>
+                    <li><span className="bottom-temp">Najniža Temperatura:</span> {bottomTemperature !== null ? `${bottomTemperature}°C` : 'Loading...'}</li>
                 </ul>
             </div>
         </div>
@@ -98,35 +97,35 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const [loading, setLoading] = useState(true);
     const [topTemperature, setTopTemperature] = useState<string>('');
     const [bottomTemperature, setBottomTemperature] = useState<string>('');
-    const [setTemperature, setSetTemperature] = useState<string>('');
+    //const [setTemperature, setSetTemperature] = useState<string>('');
     const [existingTemperatures, setExistingTemperatures] = useState<TemperatureData | null>(null);
     const [message] = useState<string>('');
 
-    const [minTemperature, setMinTemperature] = useState<number>(50);
-    const [maxTemperature, setMaxTemperature] = useState<number>(100);
+    // const [minTemperature, setMinTemperature] = useState<number>(50);
+    // const [maxTemperature, setMaxTemperature] = useState<number>(100);
 
     // @ts-ignore
-    const handleTopTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = Number(e.target.value);
-        // Ensure topTemperature is not less than setTemperature
-        if (setTemperature !== '' && value < Number(setTemperature)) {
-            alert(`Najviša temperatura ne može biti manja od zadane temperature ${setTemperature}°C.`);
-        } else {
-            setTopTemperature(value.toString());
-        }
-    };
-
-    // @ts-ignore
-    // noinspection JSUnusedLocalSymbols
-    const handleBottomTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = Number(e.target.value);
-        // Ensure bottomTemperature is not greater than setTemperature
-        if (setTemperature !== '' && value > Number(setTemperature)) {
-            alert(`Donja temperatura ne može biti veća od zadane temperature ${setTemperature}°C.`);
-        } else {
-            setBottomTemperature(value.toString());
-        }
-    };
+    // const handleTopTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    //     const value = Number(e.target.value);
+    //     // Ensure topTemperature is not less than setTemperature
+    //     if (setTemperature !== '' && value < Number(setTemperature)) {
+    //         alert(`Najviša temperatura ne može biti manja od zadane temperature ${setTemperature}°C.`);
+    //     } else {
+    //         setTopTemperature(value.toString());
+    //     }
+    // };
+    //
+    // // @ts-ignore
+    // // noinspection JSUnusedLocalSymbols
+    // const handleBottomTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    //     const value = Number(e.target.value);
+    //     // Ensure bottomTemperature is not greater than setTemperature
+    //     if (setTemperature !== '' && value > Number(setTemperature)) {
+    //         alert(`Najniža temperatura ne može biti veća od zadane temperature ${setTemperature}°C.`);
+    //     } else {
+    //         setBottomTemperature(value.toString());
+    //     }
+    // };
 
     useEffect(() => {
         const fetchCardData = async () => {
@@ -141,12 +140,12 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
 
                 setExistingTemperatures(data);
 
-                setMinTemperature(data.bottomTemperature ?? 50);
-                setMaxTemperature(data.topTemperature ?? 100);
+                //setMinTemperature(data.bottomTemperature ?? 50);
+                //setMaxTemperature(data.topTemperature ?? 100);
 
                 setTopTemperature('');
                 setBottomTemperature('');
-                setSetTemperature('');
+                //setSetTemperature('');
 
             } catch (error) {
                 console.error('Greška u učitavanju podataka:', error);
@@ -161,20 +160,20 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (setTemperature !== '') {
-            const updatedTemperature = Number(setTemperature);
-
-            if (updatedTemperature < minTemperature || updatedTemperature > maxTemperature) {
-                alert(`Temperatura mora biti između ${minTemperature}°C i ${maxTemperature}°C.`);
-                return;
-            }
-        }
+        // if (setTemperature !== '') {
+        //     const updatedTemperature = Number(setTemperature);
+        //
+        //     if (updatedTemperature < minTemperature || updatedTemperature > maxTemperature) {
+        //         alert(`Temperatura mora biti između ${minTemperature}°C i ${maxTemperature}°C.`);
+        //         return;
+        //     }
+        // }
 
         const updatedData = {
             id: Number(id),
             topTemperature: topTemperature ? Number(topTemperature) : existingTemperatures?.topTemperature,
             bottomTemperature: bottomTemperature ? Number(bottomTemperature) : existingTemperatures?.bottomTemperature,
-            setTemperature: setTemperature ? Number(setTemperature) : existingTemperatures?.setTemperature,
+            //setTemperature: setTemperature ? Number(setTemperature) : existingTemperatures?.setTemperature,
             currentTemperature: existingTemperatures?.currentTemperature
         };
 
@@ -199,13 +198,13 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                 setCardData(updatedCardData);
                 setExistingTemperatures(updatedCardData);
 
-                setMinTemperature(updatedCardData.bottomTemperature ?? 50); // Update minTemperature after submit
-                setMaxTemperature(updatedCardData.topTemperature ?? 100); // Update maxTemperature after submit
+                //setMinTemperature(updatedCardData.bottomTemperature ?? 50); // Update minTemperature after submit
+                //setMaxTemperature(updatedCardData.topTemperature ?? 100); // Update maxTemperature after submit
 
                 // Empties the numbers from form
                 setTopTemperature('');
                 setBottomTemperature('');
-                setSetTemperature('');
+                //setSetTemperature('');
                 setCardData(updatedCardData);
                 setExistingTemperatures(updatedCardData);
 
@@ -237,9 +236,8 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                 <div className="kont-temp-left">
                     <div className="card-detail" style={{textAlign: 'center', fontSize: '1.5rem'}}>
                         <p><span style={{color: "red"}}>Najviša Temperatura:</span> {cardData.topTemperature}°C</p>
-                        <p><span style={{color: "green"}}>Zadana Temperatura:</span> {cardData.setTemperature}°C</p>
-                        <p><span style={{color: "blue"}}>Donja Temperatura:</span> {cardData.bottomTemperature}°C</p>
                         <p><span style={{color: "#fcca03"}}>Trenutna Temperatura:</span> {cardData.currentTemperature}°C</p>
+                        <p><span style={{color: "blue"}}>Najniža Temperatura:</span> {cardData.bottomTemperature}°C</p>
                     </div>
                 </div>
 
@@ -252,27 +250,16 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                                 <input
                                     className="top-temp-form"
                                     type="number"
-                                    min={55} // Dynamic min Math.max(minTemperature, Number(setTemperature))
+                                    min={55}
                                     max={100}
                                     value={topTemperature}
                                     onChange={(e) => setTopTemperature(e.target.value)} //{handleTopTemperatureChange}
                                     //placeholder={`Može biti do 100`} // ${minTemperature}
                                 />
                             </div>
+
                             <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Zadaj Temperaturu:</label>
-                                <input
-                                    className="set-temp-form"
-                                    type="number"
-                                    min={minTemperature}
-                                    max={maxTemperature}
-                                    value={setTemperature}
-                                    onChange={(e) => setSetTemperature(e.target.value)}
-                                    placeholder={`Može biti između ${minTemperature}-${maxTemperature}`}
-                                />
-                            </div>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Donja Temperatura:</label>
+                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Najniža Temperatura:</label>
                                 <input
                                     className="donja-temp-form"
                                     type="number"
@@ -280,7 +267,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                                     max={80}
                                     value={bottomTemperature}
                                     onChange={(e) => setBottomTemperature(e.target.value)} //onChange={handleBottomTemperatureChange}
-                                    //placeholder={`Od 55 - zadane temp.`}
+                                    //placeholder={`   `}
                                 />
                             </div>
                             <button className="temp-submit" type="submit">Promijeni</button>
@@ -313,7 +300,7 @@ interface TemperatureData {
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
-    setTemperature: number | null;
+    //setTemperature: number | null;
     elGrijac: number;
 }
 
@@ -399,7 +386,7 @@ const App: React.FC = () => {
                                 topTemperature,
                                 currentTemperature,
                                 bottomTemperature,
-                                setTemperature,
+                                //setTemperature,
                                 elGrijac
                             }) => (
                                 <Card
@@ -408,7 +395,7 @@ const App: React.FC = () => {
                                     topTemperature={topTemperature}
                                     currentTemperature={currentTemperature}
                                     bottomTemperature={bottomTemperature}
-                                    setTemperature={setTemperature}
+                                    // setTemperature={setTemperature}
                                     elGrijac={elGrijac}
                                     isLoggedIn={isLoggedIn}
                                 />
