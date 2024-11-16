@@ -66,7 +66,7 @@ interface CardProps {
 }
 
 const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature, elGrijac, isLoggedIn }) => {
-    const cardName = id === 10 ? 'BAIC' : `KADA ${id}`;
+    const cardName = id === 10 ? 'BAJC' : `KADA ${id}`;
 
     const handleClick = () => {
         if (isLoggedIn) {
@@ -130,14 +130,14 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     useEffect(() => {
         const fetchCardData = async () => {
             try {
-                const response = await fetch(`http://localhost:5174/api/cards/${id}`);
+                const response = await fetch(`http://192.168.1.26:5174/api/cards/${id}`);
                 if (!response.ok) {
                     // noinspection ExceptionCaughtLocallyJS
                     throw new Error('Network response was not ok');
                 }
                 const data: TemperatureData = await response.json();
                 setCardData(data);
-
+                logFetchDataSuccess();
                 setExistingTemperatures(data);
 
                 //setMinTemperature(data.bottomTemperature ?? 50);
@@ -149,13 +149,46 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
 
             } catch (error) {
                 console.error('Greška u učitavanju podataka:', error);
+                if (error instanceof Error) {
+                    logFetchDataError(error.message);  // Logovanje errora
+                } else {
+                    logFetchDataError('Unknown error occurred');
+                }
+
             } finally {
                 setLoading(false);
             }
         };
-
         fetchCardData();
     }, [id]);
+
+    const logFetchDataSuccess = async () => {
+        const logData = {
+            message: `Podaci za kartu ${id} uspješno učitani`,
+            type: 'info',
+            timestamp: new Date().toISOString(),
+        };
+
+        await fetch('http://192.168.1.26:5174/api/logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(logData),
+        });
+    };
+
+    const logFetchDataError = async (errorMessage: string) => {
+        const logData = {
+            message: `Greška u učitavanju podataka za kartu ${id}: ${errorMessage}`,
+            type: 'error',
+            timestamp: new Date().toISOString(),
+        };
+
+        await fetch('http://192.168.1.26:5174/api/logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(logData),
+        });
+    };
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -183,7 +216,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
         }
 
         try {
-            const response = await fetch(`http://localhost:5174/api/cards/${id}`, {
+            const response = await fetch(`http://192.168.1.26:5174/api/cards/${id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData),
@@ -191,8 +224,9 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
 
             if (response.ok) {
                 alert('Temperature uspješno promijenjene!');
+                await logTemperatureUpdate();
 
-                const updatedResponse = await fetch(`http://localhost:5174/api/cards/${id}`);
+                const updatedResponse = await fetch(`http://192.168.1.26:5174/api/cards/${id}`);
                 const updatedCardData: TemperatureData = await updatedResponse.json();
 
                 setCardData(updatedCardData);
@@ -219,6 +253,20 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
         }
     };
 
+    const logTemperatureUpdate = async () => {
+        const logData = {
+            message: `Temperatura za ${cardName} uspješno promijenjena`,
+            type: 'info', // Change this based on the log type
+            timestamp: new Date().toISOString(),
+        };
+
+        await fetch('http://192.168.1.26:5174/api/logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(logData),
+        });
+    };
+
     if (loading) {
         return <p>Loading...</p>;
     }
@@ -227,7 +275,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
         return <p>No data found.</p>;
     }
 
-    const cardName = id === '10' ? 'BAIC' : `KADA ${id}`;
+    const cardName = id === '10' ? 'BAJC' : `KADA ${id}`;
 
     return (
         <div style={{ padding: '2rem' }}>
@@ -323,7 +371,7 @@ const App: React.FC = () => {
 
     const fetchTemperatureData = async () => {
         try {
-            const response = await fetch('http://localhost:5174/api/cards');
+            const response = await fetch('http://192.168.1.26:5174/api/cards');
             if (!response.ok) {
                 // noinspection ExceptionCaughtLocallyJS
                 throw new Error('Network response was not ok');
@@ -344,7 +392,7 @@ const App: React.FC = () => {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const response = await fetch('http://localhost:5174/api/login', {
+        const response = await fetch('http://192.168.1.26:5174/api/login', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({username, password}),

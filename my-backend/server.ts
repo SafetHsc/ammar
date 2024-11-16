@@ -23,6 +23,49 @@ db.getConnection()
     .then(() => console.log('Connected to the database.'))
     .catch((err) => console.error('Database connection failed:', (err as Error).message));
 
+// Function to insert log data into the logs table
+async function insertLog(
+    cardId: number,
+    level: 'info' | 'warning' | 'error',
+    message: string,
+    logDate: string,
+    elGrijacState: number,
+    ventilState: number,
+    stateChangedTimestamp: string | null,
+    stateReturnedTimestamp: string | null,
+    durationSeconds: number | null,
+    warningMessage: string | null,
+    errorMessage: string | null
+) {
+    const query = `
+        INSERT INTO logs (
+            card_id, level, message, log_date, elGrijac_state, ventil_state, 
+            state_changed_timestamp, state_returned_timestamp, duration_seconds, 
+            warning_message, error_message
+        ) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    try {
+        await db.query(query, [
+            cardId,
+            level,
+            message,
+            logDate,
+            elGrijacState,
+            ventilState,
+            stateChangedTimestamp,
+            stateReturnedTimestamp,
+            durationSeconds,
+            warningMessage,
+            errorMessage
+        ]);
+        console.log('Log inserted successfully');
+    } catch (error) {
+        console.error('Error inserting log:', error);
+    }
+}
+
 // Global variable to store the latest data
 let latestArduinoData = 'No data received yet';
 
@@ -57,26 +100,76 @@ async function parseAndSaveData(data: string) {
             return;
         }
 
+        const cardId = parseInt(id, 10);
+        const newElGrijacState = parseInt(elGrijac, 10);
+        const newVentilState = parseInt(ventil, 10);
+
+        // Log the state change
+        const now = new Date();
+        const logDate = now.toISOString().split('T')[0];  // Format as YYYY-MM-DD
+
+        let stateChangedTimestamp = null;
+        let stateReturnedTimestamp = null;
+        let durationSeconds = null;
+
+        // Track state change and calculate duration
+        if (newElGrijacState === 1 || newVentilState === 1) {
+            stateChangedTimestamp = now.toISOString();
+        } else if (newElGrijacState === 0 || newVentilState === 0) {
+            stateReturnedTimestamp = now.toISOString();
+            if (stateChangedTimestamp) {
+                const diff = (new Date(stateReturnedTimestamp).getTime() - new Date(stateChangedTimestamp).getTime()) / 1000; // in seconds
+                durationSeconds = diff;
+            }
+        }
+
+        // Prepare log message
+        const message = `State change detected for elGrijac and ventil on card ${cardId}`;
+
+        let warningMessage = null;
+        let errorMessage = null;
+
+        // Check for any warnings or errors
+        if (parseFloat(currentTemperature) < 0) {
+            warningMessage = 'Temperature below 0°C';
+        }
+
+        // Insert log entry into the database
+        await insertLog(
+            cardId,
+            'info',  // or 'warning' based on the situation
+            message,
+            logDate,
+            newElGrijacState,
+            newVentilState,
+            stateChangedTimestamp,
+            stateReturnedTimestamp,
+            durationSeconds,
+            warningMessage,
+            errorMessage
+        );
+
+        // Proceed with your database update or other operations
+        const query = `
+            UPDATE cards
+            SET currentTemperature = ?, elGrijac = ?, ventil = ?
+            WHERE id = ?`;
+
         try {
-            const query = `
-                UPDATE cards
-                SET currentTemperature = ?, elGrijac = ?, ventil = ?
-                WHERE id = ?`;
             const [result]: [ResultSetHeader, any] = await db.query<ResultSetHeader>(query, [
                 parseFloat(currentTemperature),
-                parseInt(elGrijac, 10),
-                parseInt(ventil, 10),
-                parseInt(id, 10),
+                newElGrijacState,
+                newVentilState,
+                cardId,
             ]);
 
-            console.log(`${id}, ${currentTemperature}, ${elGrijac}, ${ventil}`);
             if (result.affectedRows > 0) {
-                console.log(`Card ${id} updated successfully.`);
+                console.log(`Card ${cardId} updated successfully.`);
             } else {
-                console.error(`Card ${id} not found in database.`);
+                console.error(`Card ${cardId} not found in database.`);
             }
         } catch (error) {
-            console.error(`Error updating card ${id}:`, (error as Error).message);
+            console.error(`Error updating card ${cardId}:`, (error as Error).message);
         }
     });
 
@@ -95,7 +188,7 @@ async function sendDataToArduino() {
             .map((row: any) => `*${row.id},${row.topTemperature},${row.bottomTemperature}`)
             .join(''); // Combine all cards without extra separator
 
-        // Add `!*` at the start and `*!` at the end
+        // Add `!` at the start and `*!` at the end
         const formattedData = `!${dataToSend}*!`;
 
         // Write data to the serial port
@@ -218,6 +311,50 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ success: false, message: 'An error occurred while processing your request' });
     }
 });
+
+app.get('/api/logs', async (req, res) => {
+    const { cardId, date, level, page = 1, limit = 10 } = req.query;
+
+    let whereClauses: string[] = [];
+    let queryParams: any[] = [];
+
+    if (cardId && cardId !== 'all') {
+        whereClauses.push('card_id = ?');
+        queryParams.push(cardId);
+    }
+
+    if (date) {
+        whereClauses.push('DATE(timestamp) = ?');
+        queryParams.push(date);
+    }
+
+    if (level && level !== 'all') {
+        whereClauses.push('level = ?');
+        queryParams.push(level);
+    }
+
+    const whereSQL = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+    const offset = (parseInt(page as string, 10) - 1) * parseInt(limit as string, 10);
+
+    const query = `
+        SELECT * FROM logs
+                          ${whereSQL}
+        ORDER BY timestamp DESC
+            LIMIT ? OFFSET ?
+    `;
+
+    console.log('Executing query:', query);
+    console.log('With parameters:', [...queryParams, parseInt(limit as string, 10), offset]);
+
+    try {
+        const [logs] = await db.query(query, [...queryParams, parseInt(limit as string, 10), offset]);
+        res.json(logs);
+    } catch (error) {
+        console.error('Error fetching logs:', error); // Log the full error
+        res.status(500).json({ error: 'Failed to fetch logs', details: (error as Error).message });
+    }
+});
+
 
 // Start the server
 app.listen(port, () => {
