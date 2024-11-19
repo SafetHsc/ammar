@@ -298,7 +298,7 @@ a:hover {
 }
 
 .top-temp-form {
-  width: 100%;
+  width: 95%;
   padding: 0.5rem;
   border-radius: 4px;
   border: 1px solid #ccc;
@@ -317,16 +317,8 @@ a:hover {
   color: blue;
 }
 
-.set-temp-form {
-  width: 100%;
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size:inherit;
-}
-
 .donja-temp-form {
-  width: 100%;
+  width: 95%;
   padding: 0.5rem;
   border-radius: 4px;
   border: 1px solid #ccc;
@@ -351,7 +343,6 @@ a:hover {
 .nazad {
   font-size: 18px;
   margin-top: 20px;
-
 }
 
 .logout-btn {
@@ -541,7 +532,7 @@ select {
 }
 
 .form input {
-  width: 100%;
+  width: 95%;
   padding: 0.5rem; /* Match .top-temp-form and .set-temp-form */
   border-radius: 4px; /* Same as other forms */
   border: 1px solid #ccc; /* Consistent with inputs */

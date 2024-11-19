@@ -373,7 +373,7 @@ const App: React.FC = () => {
             }/>
             <Route path="/login" element={
                 <div className="login-page">
-                    <h2>Prijava</h2>
+                    <h2 style={{marginBottom:"3rem"}}>Prijava</h2>
                     <form onSubmit={handleLogin}>
                         <div>
                             <label>Korisnik:</label>
@@ -383,9 +383,9 @@ const App: React.FC = () => {
                             <label>Lozinka:</label>
                             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                         </div>
-                        <button type="submit">Prijavi Se</button>
+                        <button type="submit" style={{fontSize:"inherit"}} >Prijavi se</button>
                     </form>
-                    <Link to="/">Nazad</Link>
+                    <Link to="/" >Nazad</Link>
                 </div>
             } />
             <Route path="/logovi" element={
