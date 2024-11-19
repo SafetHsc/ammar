@@ -3,6 +3,7 @@ import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import grijacOn from "./assets/grijacON.png";
 import grijacOff from "./assets/grijacOff.jpg";
 import LogsPage from "./Components/LogsPage.tsx";
+import Korisnici from "./Components/Korisnici.tsx";
 import './App.css';
 
 // Header
@@ -29,26 +30,30 @@ const Header: React.FC<{ isLoggedIn: boolean; role: number | null; onLogout: () 
             <div className="header-right">
                 {isLoggedIn ? (
                     <>
-                        {role === 1 ? (
+                        {role === 1 && (
                             <>
                                 <Link to="/logovi">
-                                    <button className="logs-btn">SVI LOGOVI</button>
+                                    <button className="logs-btn">LOGOVI</button>
                                 </Link>
-                                <Link to="/log">
-                                    <button className="daily-log-btn">DANAŠNJI LOG</button>
+                                <Link to="/korisnici">
+                                    <button className="korisnici-btn">KORISNICI</button>
                                 </Link>
                             </>
-                        ) : (
-                            <Link to="/log">
-                                <button className="daily-log-btn">DANAŠNJI LOG</button>
-                            </Link>
                         )}
-                        <button className="logout-btn" onClick={onLogout}>LOG OUT</button>
+                        <Link to="/signali">
+                            <button className="signali-btn">SIGNALI</button>
+                        </Link>
+                        <button className="logout-btn" onClick={onLogout}>ODJAVA</button>
                     </>
                 ) : (
-                    <Link to="/login">
-                        <button className="login-btn">PRIJAVA</button>
-                    </Link>
+                    <>
+                        <Link to="/signali">
+                            <button className="signali-btn">SIGNALI</button>
+                        </Link>
+                        <Link to="/login">
+                            <button className="login-btn">PRIJAVA</button>
+                        </Link>
+                    </>
                 )}
             </div>
         </header>
@@ -60,7 +65,6 @@ interface CardProps {
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
-    // setTemperature: number | null;
     elGrijac: number;
     isLoggedIn: boolean;
 }
@@ -80,7 +84,7 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
         <div className="card" onClick={handleClick}>
             <img src={elGrijac === 1 ? grijacOn : grijacOff} alt="Temperature Icon" className="temp-icon" />
             <div className="temp-info">
-                <h3 style={{ marginLeft: "15px", paddingTop: "15px", fontSize: "22px", marginBottom:"8px" }}>{cardName}</h3>
+                <h3 className="card-name">{cardName}</h3>
                 <ul className="temp-list">
                     <li><span className="top-temp">Najviša Temperatura:</span> {topTemperature !== null ? `${topTemperature}°C` : 'Loading...'}</li>
                     <li><span className="current-temp">Trenutna Temperatura:</span> <p className="current-temp-broj">{currentTemperature !== null ? `${currentTemperature}°C` : 'Loading...'}</p></li>
@@ -91,69 +95,33 @@ const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bot
     );
 };
 
+
 const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const { id } = useParams<{ id: string }>();
     const [cardData, setCardData] = useState<TemperatureData | null>(null);
     const [loading, setLoading] = useState(true);
     const [topTemperature, setTopTemperature] = useState<string>('');
     const [bottomTemperature, setBottomTemperature] = useState<string>('');
-    //const [setTemperature, setSetTemperature] = useState<string>('');
     const [existingTemperatures, setExistingTemperatures] = useState<TemperatureData | null>(null);
     const [message] = useState<string>('');
-
-    // const [minTemperature, setMinTemperature] = useState<number>(50);
-    // const [maxTemperature, setMaxTemperature] = useState<number>(100);
-
-    // @ts-ignore
-    // const handleTopTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    //     const value = Number(e.target.value);
-    //     // Ensure topTemperature is not less than setTemperature
-    //     if (setTemperature !== '' && value < Number(setTemperature)) {
-    //         alert(`Najviša temperatura ne može biti manja od zadane temperature ${setTemperature}°C.`);
-    //     } else {
-    //         setTopTemperature(value.toString());
-    //     }
-    // };
-    //
-    // // @ts-ignore
-    // // noinspection JSUnusedLocalSymbols
-    // const handleBottomTemperatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    //     const value = Number(e.target.value);
-    //     // Ensure bottomTemperature is not greater than setTemperature
-    //     if (setTemperature !== '' && value > Number(setTemperature)) {
-    //         alert(`Najniža temperatura ne može biti veća od zadane temperature ${setTemperature}°C.`);
-    //     } else {
-    //         setBottomTemperature(value.toString());
-    //     }
-    // };
 
     useEffect(() => {
         const fetchCardData = async () => {
             try {
-                const response = await fetch(`http://192.168.1.26:5174/api/cards/${id}`);
+                const response = await fetch(`http://localhost:5174/api/cards/${id}`);
                 if (!response.ok) {
                     // noinspection ExceptionCaughtLocallyJS
                     throw new Error('Network response was not ok');
                 }
                 const data: TemperatureData = await response.json();
                 setCardData(data);
-                logFetchDataSuccess();
                 setExistingTemperatures(data);
-
-                //setMinTemperature(data.bottomTemperature ?? 50);
-                //setMaxTemperature(data.topTemperature ?? 100);
 
                 setTopTemperature('');
                 setBottomTemperature('');
-                //setSetTemperature('');
 
             } catch (error) {
                 console.error('Greška u učitavanju podataka:', error);
-                if (error instanceof Error) {
-                    logFetchDataError(error.message);  // Logovanje errora
-                } else {
-                    logFetchDataError('Unknown error occurred');
-                }
 
             } finally {
                 setLoading(false);
@@ -162,61 +130,23 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
         fetchCardData();
     }, [id]);
 
-    const logFetchDataSuccess = async () => {
-        const logData = {
-            message: `Podaci za kartu ${id} uspješno učitani`,
-            type: 'info',
-            timestamp: new Date().toISOString(),
-        };
-
-        await fetch('http://192.168.1.26:5174/api/logs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(logData),
-        });
-    };
-
-    const logFetchDataError = async (errorMessage: string) => {
-        const logData = {
-            message: `Greška u učitavanju podataka za kartu ${id}: ${errorMessage}`,
-            type: 'error',
-            timestamp: new Date().toISOString(),
-        };
-
-        await fetch('http://192.168.1.26:5174/api/logs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(logData),
-        });
-    };
-
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        // if (setTemperature !== '') {
-        //     const updatedTemperature = Number(setTemperature);
-        //
-        //     if (updatedTemperature < minTemperature || updatedTemperature > maxTemperature) {
-        //         alert(`Temperatura mora biti između ${minTemperature}°C i ${maxTemperature}°C.`);
-        //         return;
-        //     }
-        // }
 
         const updatedData = {
             id: Number(id),
             topTemperature: topTemperature ? Number(topTemperature) : existingTemperatures?.topTemperature,
             bottomTemperature: bottomTemperature ? Number(bottomTemperature) : existingTemperatures?.bottomTemperature,
-            //setTemperature: setTemperature ? Number(setTemperature) : existingTemperatures?.setTemperature,
             currentTemperature: existingTemperatures?.currentTemperature
         };
 
         if (!isLoggedIn) {
-            alert('You must be logged in to update temperatures.');
+            alert('Morate biti prijavljeni za izmjene temperatura!.');
             return;
         }
 
         try {
-            const response = await fetch(`http://192.168.1.26:5174/api/cards/${id}`, {
+            const response = await fetch(`http://localhost:5174/api/cards/${id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData),
@@ -224,21 +154,17 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
 
             if (response.ok) {
                 alert('Temperature uspješno promijenjene!');
-                await logTemperatureUpdate();
 
-                const updatedResponse = await fetch(`http://192.168.1.26:5174/api/cards/${id}`);
+                const updatedResponse = await fetch(`http://localhost:5174/api/cards/${id}`);
                 const updatedCardData: TemperatureData = await updatedResponse.json();
 
                 setCardData(updatedCardData);
                 setExistingTemperatures(updatedCardData);
 
-                //setMinTemperature(updatedCardData.bottomTemperature ?? 50); // Update minTemperature after submit
-                //setMaxTemperature(updatedCardData.topTemperature ?? 100); // Update maxTemperature after submit
-
                 // Empties the numbers from form
                 setTopTemperature('');
                 setBottomTemperature('');
-                //setSetTemperature('');
+
                 setCardData(updatedCardData);
                 setExistingTemperatures(updatedCardData);
 
@@ -253,20 +179,6 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
         }
     };
 
-    const logTemperatureUpdate = async () => {
-        const logData = {
-            message: `Temperatura za ${cardName} uspješno promijenjena`,
-            type: 'info', // Change this based on the log type
-            timestamp: new Date().toISOString(),
-        };
-
-        await fetch('http://192.168.1.26:5174/api/logs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(logData),
-        });
-    };
-
     if (loading) {
         return <p>Loading...</p>;
     }
@@ -278,23 +190,23 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     const cardName = id === '10' ? 'BAJC' : `KADA ${id}`;
 
     return (
-        <div style={{ padding: '2rem' }}>
-            <h2 style={{ textAlign: 'center' }}>{cardName} - Kontrola Temperatura</h2>
+        <div className="kont-temp-div">
+            <h2 className="h2-kont-temp">{cardName} - Kontrola Temperatura</h2>
             <div className="kont-temp">
                 <div className="kont-temp-left">
-                    <div className="card-detail" style={{textAlign: 'center', fontSize: '1.5rem'}}>
-                        <p><span style={{color: "red"}}>Najviša Temperatura:</span> {cardData.topTemperature}°C</p>
-                        <p><span style={{color: "#fcca03"}}>Trenutna Temperatura:</span> {cardData.currentTemperature}°C</p>
-                        <p><span style={{color: "blue"}}>Najniža Temperatura:</span> {cardData.bottomTemperature}°C</p>
+                    <div className="card-detail">
+                        <p><span className="toptemp-span">Najviša Temperatura:</span> {cardData.topTemperature}°C</p>
+                        <p><span className="currenttemp-span">Trenutna Temperatura:</span> {cardData.currentTemperature}°C</p>
+                        <p><span className="bottomtemp-span ">Najniža Temperatura:</span> {cardData.bottomTemperature}°C</p>
                     </div>
                 </div>
 
-                <div style={{flex: '1', maxWidth: '350px'}}>
+                <div className="card-detail-div">
                 {isLoggedIn && (
                     <form className="temp-form" onSubmit={handleUpdate}>
-                        <h3 style={{ marginTop: "0", textAlign: "center", color: '#333' }}>Podešavanje Temperatura</h3>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Najviša Temperatura:</label>
+                        <h3 className="podesavanje-temp">Podešavanje Temperatura</h3>
+                            <div className="tt-form-div">
+                                <label className="tt-label">Najviša Temperatura:</label>
                                 <input
                                     className="top-temp-form"
                                     type="number"
@@ -306,8 +218,8 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                                 />
                             </div>
 
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem' }}>Najniža Temperatura:</label>
+                            <div className="bt-form-div">
+                                <label className="bt-label">Najniža Temperatura:</label>
                                 <input
                                     className="donja-temp-form"
                                     type="number"
@@ -322,10 +234,10 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
                     </form>
                     )}
 
-                    {!isLoggedIn && <p  style={{fontSize: "1.5rem"}}><b>Morate biti prijavljeni za podešavanje temperatura!</b></p>}
+                    {!isLoggedIn && <p className="warning"><b>Morate biti prijavljeni za podešavanje temperatura!</b></p>}
                     {message && <p>{message}</p>}
 
-                    <Link to="/" style={{ fontSize: "18px", marginTop: "20px" }}>Nazad</Link>
+                    <Link to="/" className="nazad" >Nazad</Link>
                 </div>
             </div>
         </div>
@@ -348,7 +260,6 @@ interface TemperatureData {
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
-    //setTemperature: number | null;
     elGrijac: number;
 }
 
@@ -371,7 +282,7 @@ const App: React.FC = () => {
 
     const fetchTemperatureData = async () => {
         try {
-            const response = await fetch('http://192.168.1.26:5174/api/cards');
+            const response = await fetch('http://localhost:5174/api/cards');
             if (!response.ok) {
                 // noinspection ExceptionCaughtLocallyJS
                 throw new Error('Network response was not ok');
@@ -392,7 +303,7 @@ const App: React.FC = () => {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const response = await fetch('http://192.168.1.26:5174/api/login', {
+        const response = await fetch('http://localhost:5174/api/login', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({username, password}),
@@ -417,6 +328,8 @@ const App: React.FC = () => {
     const handleLogout = () => {
         setIsLoggedIn(false);
         setRole(null);
+        setUsername('');  // briše kredencijale iz forme
+        setPassword('');
         sessionStorage.removeItem('isLoggedIn');
         sessionStorage.removeItem('role');
         navigate('/');
@@ -434,7 +347,6 @@ const App: React.FC = () => {
                                 topTemperature,
                                 currentTemperature,
                                 bottomTemperature,
-                                //setTemperature,
                                 elGrijac
                             }) => (
                                 <Card
@@ -443,7 +355,6 @@ const App: React.FC = () => {
                                     topTemperature={topTemperature}
                                     currentTemperature={currentTemperature}
                                     bottomTemperature={bottomTemperature}
-                                    // setTemperature={setTemperature}
                                     elGrijac={elGrijac}
                                     isLoggedIn={isLoggedIn}
                                 />
@@ -488,17 +399,14 @@ const App: React.FC = () => {
                     <InvalidLink />
                 )
             } />
-            <Route path="/log" element={
-                isLoggedIn ? (
-                    <div className="user-log">
-                        <h2>Korisnik Logovi</h2>
-                        <p>Sadržaj u izradi</p>
-                        <Link to="/">Nazad</Link>
-                        {/* Add your user content here */}
-                    </div>
-                ) : (
-                    <InvalidLink/>
-                )
+            <Route path="/korisnici" element={isLoggedIn && role === 1 ? <Korisnici /> : <InvalidLink />} />
+            <Route path="/signali" element={
+                <div className="signali">
+                    <h2>Signali</h2>
+                    <p>Sadržaj u izradi</p>
+                    <Link to="/">Nazad</Link>
+                    {/* Add your content here */}
+                </div>
             } />
             <Route path="*" element={<InvalidLink />} />
         </Routes>

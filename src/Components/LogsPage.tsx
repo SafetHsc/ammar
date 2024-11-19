@@ -5,7 +5,7 @@ interface LogEntry {
     timestamp: string;
     message: string;
     level: 'info' | 'warning' | 'error';
-    cardId: number;
+    cardId: number; // Added card ID to identify logs per card
 }
 
 const LogsPage: React.FC = () => {
@@ -15,55 +15,61 @@ const LogsPage: React.FC = () => {
     const [selectedCardId, setSelectedCardId] = useState<number | 'all'>('all');
     const [selectedDate, setSelectedDate] = useState<string>('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const logsPerPage = 10;
 
     useEffect(() => {
+        // Fetch logs from your API here, including card and date filters
         const fetchLogs = async () => {
-            setLoading(true);
-            setError(null);
-
             try {
                 const queryParams = new URLSearchParams();
                 if (selectedCardId !== 'all') queryParams.append('cardId', selectedCardId.toString());
                 if (selectedDate) queryParams.append('date', selectedDate);
-                if (filterLevel !== 'all') queryParams.append('level', filterLevel);
-                queryParams.append('page', currentPage.toString());
-                queryParams.append('limit', logsPerPage.toString());
 
                 const response = await fetch(`/api/logs?${queryParams.toString()}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch logs');
-                }
-
                 const data = await response.json();
                 setLogs(data);
-
-                const totalLogs = parseInt(response.headers.get('X-Total-Count') || '0', 10);
-                setTotalPages(Math.ceil(totalLogs / logsPerPage));
             } catch (error) {
-                setError('Error fetching logs. Please try again later.');
-            } finally {
-                setLoading(false);
+                console.error("Failed to fetch logs:", error);
             }
         };
-
         fetchLogs();
-    }, [selectedCardId, selectedDate, filterLevel, currentPage]);
+    }, [selectedCardId, selectedDate]);
 
-    // Filter logs locally
-    const filteredLogs = logs.filter(log =>
-        log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.timestamp.includes(searchTerm)
-    );
+    // Filter and search logs
+    const filteredLogs = logs
+        .filter(log =>
+            (filterLevel === 'all' || log.level === filterLevel) &&
+            (selectedCardId === 'all' || log.cardId === selectedCardId) &&
+            (log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                log.timestamp.includes(searchTerm))
+        );
 
-    // Pagination logic
+    // Paginate logs
+    const indexOfLastLog = currentPage * logsPerPage;
+    const indexOfFirstLog = indexOfLastLog - logsPerPage;
+    const currentLogs = filteredLogs.slice(indexOfFirstLog, indexOfLastLog);
+
+    const totalPages = Math.ceil(filteredLogs.length / logsPerPage);
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+        setCurrentPage(1);
+    };
+
+    const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setFilterLevel(e.target.value as 'all' | 'info' | 'warning' | 'error');
+        setCurrentPage(1);
+    };
+
+    const handleCardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedCardId(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10));
+    };
+
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSelectedDate(e.target.value);
+    };
+
     const handlePageChange = (page: number) => setCurrentPage(page);
-
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div>{error}</div>;
 
     return (
         <div className="logs-page">
@@ -73,27 +79,26 @@ const LogsPage: React.FC = () => {
                     type="text"
                     placeholder="Search logs..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={handleSearchChange}
                 />
-                <select value={filterLevel} onChange={(e) => setFilterLevel(e.target.value as 'all' | 'info' | 'warning' | 'error')}>
-                    <option value="all">Level</option>
+                <select value={filterLevel} onChange={handleFilterChange}>
+                    <option value="all">Leveli</option>
                     <option value="info">Info</option>
                     <option value="warning">Warning</option>
                     <option value="error">Error</option>
                 </select>
 
-                <select value={selectedCardId} onChange={(e) => setSelectedCardId(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))}>
-                    <option value="all">All Cards</option>
+                <select value={selectedCardId} onChange={handleCardChange}>
+                    <option value="all">Sve Kade</option>
                     {Array.from({ length: 10 }, (_, index) => (
                         <option key={index + 1} value={index + 1}>
-                            Card {index + 1}
+                            Kada {index + 1}
                         </option>
                     ))}
                 </select>
 
-                <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                <input type="date" value={selectedDate} onChange={handleDateChange} />
             </div>
-
             <table className="logs-table">
                 <thead>
                 <tr>
@@ -105,7 +110,7 @@ const LogsPage: React.FC = () => {
                 </tr>
                 </thead>
                 <tbody>
-                {filteredLogs.map(log => (
+                {currentLogs.map(log => (
                     <tr key={log.id}>
                         <td>{log.id}</td>
                         <td>{log.timestamp}</td>
@@ -116,14 +121,12 @@ const LogsPage: React.FC = () => {
                 ))}
                 </tbody>
             </table>
-
             <div className="pagination">
                 {Array.from({ length: totalPages }, (_, index) => (
                     <button
                         key={index + 1}
                         className={currentPage === index + 1 ? 'active' : ''}
                         onClick={() => handlePageChange(index + 1)}
-                        aria-label={`Page ${index + 1}`}
                     >
                         {index + 1}
                     </button>

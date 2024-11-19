@@ -56,6 +56,7 @@ html, body {
   color: white;
   border: none;
   padding: 10px 20px;
+  margin-left: 12px;
   font-size: 1rem;
   border-radius: 5px;
   cursor: pointer;
@@ -90,6 +91,13 @@ html, body {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: add a slight shadow for depth */
 }
 
+.card-name {
+  margin-left: 15px;
+  padding-top: 15px;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
 .card:hover {
   transform: translateY(-5px);
 }
@@ -97,6 +105,7 @@ html, body {
 .card-detail {
   text-align: center;
   margin-top: 50px;
+  font-size: 1.5rem;
 }
 
 a {
@@ -222,6 +231,43 @@ a:hover {
   width: auto;
 }
 
+.podesavanje-temp {
+  margin-top: 0;
+  text-align: center;
+  color: #333;
+}
+
+.tt-form-div {
+  margin-bottom: 1rem;
+}
+
+.bt-form-div {
+  margin-bottom: 1rem;
+}
+
+.tt-label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.bt-label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.card-detail-div {
+  flex: 1;
+  max-width: 350px;
+}
+
+.h2-kont-temp {
+  text-align: center;
+}
+
+.kont-temp-div {
+  padding: 2rem;
+}
+
 .kont-temp {
   display: flex;
   justify-content: center;
@@ -259,6 +305,18 @@ a:hover {
   font-size:inherit;
 }
 
+.toptemp-span {
+  color: red;
+}
+
+.currenttemp-span {
+  color: #fcca03;
+}
+
+.bottomtemp-span {
+  color: blue;
+}
+
 .set-temp-form {
   width: 100%;
   padding: 0.5rem;
@@ -290,6 +348,12 @@ a:hover {
   background-color: #0091ff;
 }
 
+.nazad {
+  font-size: 18px;
+  margin-top: 20px;
+
+}
+
 .logout-btn {
   background-color: #007bff;
   color: white;
@@ -307,13 +371,14 @@ a:hover {
   color: white;
   border: none;
   padding: 10px 20px;
+  margin-left: 12px;
   font-size: 1rem;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
 
-.daily-log-btn {
+.signali-btn {
   background-color: #007bff;
   color: white;
   border: none;
@@ -325,17 +390,8 @@ a:hover {
   transition: background-color 0.3s ease;
 }
 
-/* Media Queries for Responsive Design */
-@media (max-width: 768px) {
-  .card-container {
-    grid-template-columns: repeat(2, 1fr); /* Two cards per row on tablets */
-  }
-}
-
-@media (max-width: 480px) {
-  .card-container {
-    grid-template-columns: 1fr; /* One card per row on mobile */
-  }
+.warning {
+  font-size: 1.5rem;
 }
 
 .admin-log {
@@ -344,7 +400,7 @@ a:hover {
   width: auto;
 }
 
-.user-log {
+.signali {
   text-align: center;
   margin: auto;
   width: auto;
@@ -427,4 +483,112 @@ select {
 
 .pagination button:hover {
   background-color: #ccc;
+}
+
+/* CREATE USER */
+.create-user-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  margin-left: 12px;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.create-user-btn:hover {
+  background-color: #0056b3;
+}
+
+.korisnici-page {
+  padding: 2rem; /* Use padding from .kont-temp-div for consistency */
+  margin-top: 0; /* Similar to .podesavanje-temp */
+  color: #333; /* Matching .podesavanje-temp text color */
+}
+
+.korisnici-h {
+  text-align: center;
+}
+
+.forms-container {
+  display: flex;
+  justify-content: center; /* Align centrally */
+  align-items: flex-start; /* Align forms to the top */
+  margin-top: 7rem; /* Similar to .kont-temp */
+  gap: 10rem; /* Consistent with .kont-temp */
+}
+
+.form {
+  flex: 1;
+  max-width: 350px; /* Match .card-detail-div max-width */
+  background: #f9f9f9; /* Consistent with .temp-form */
+  padding: 1.5rem; /* Consistent with .temp-form */
+  border-radius: 8px; /* Same as .temp-form */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Reused from .temp-form */
+  border: 1px solid #ccc; /* Reused */
+  font-size: 20px; /* Match font size from .temp-form */
+}
+
+.form h3 {
+  margin-bottom: 15px; /* Consistent margin for headings */
+  text-align: center; /* Center headings */
+}
+
+.form div {
+  margin-bottom: 1rem; /* Match .tt-form-div and .bt-form-div spacing */
+}
+
+.form input {
+  width: 100%;
+  padding: 0.5rem; /* Match .top-temp-form and .set-temp-form */
+  border-radius: 4px; /* Same as other forms */
+  border: 1px solid #ccc; /* Consistent with inputs */
+  font-size: inherit; /* Match font size from .temp-form */
+}
+
+.korisnici-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1rem;
+  margin-left: 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #0091ff; /* Use hover color from .temp-submit */
+}
+
+.korisnici-h {
+  text-align: center;
+}
+
+.korisnici-form-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: inherit;
+  transition: background-color 0.3s ease;
+}
+
+/* Media Queries for Responsive Design */
+@media (max-width: 768px) {
+  .card-container {
+    grid-template-columns: repeat(2, 1fr); /* Two cards per row on tablets */
+  }
+}
+
+@media (max-width: 480px) {
+  .card-container {
+    grid-template-columns: 1fr; /* One card per row on mobile */
+  }
 }
