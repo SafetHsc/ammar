@@ -4,6 +4,7 @@ import grijacOn from "./assets/grijacON.png";
 import grijacOff from "./assets/grijacOff.jpg";
 import LogsPage from "./Components/LogsPage.tsx";
 import Korisnici from "./Components/Korisnici.tsx";
+import Signali from "./Components/Signali.tsx";
 import './App.css';
 
 // Header
@@ -402,10 +403,9 @@ const App: React.FC = () => {
             <Route path="/korisnici" element={isLoggedIn && role === 1 ? <Korisnici /> : <InvalidLink />} />
             <Route path="/signali" element={
                 <div className="signali">
-                    <h2>Signali</h2>
-                    <p>Sadržaj u izradi</p>
-                    <Link to="/">Nazad</Link>
-                    {/* Add your content here */}
+                    <h2 style={{fontSize:"24px"}} >Signali</h2>
+                    <Link to="/" className="nazad" >Nazad</Link>
+                    <Signali />
                 </div>
             } />
             <Route path="*" element={<InvalidLink />} />
