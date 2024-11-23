@@ -2,6 +2,7 @@ import express from 'express';
 import mysql, {ResultSetHeader, RowDataPacket, FieldPacket} from 'mysql2/promise';
 import cors from 'cors';
 import {ReadlineParser, SerialPort} from 'serialport';
+import cron from 'node-cron';
 
 const app = express();
 const port = 5174;
@@ -21,7 +22,10 @@ const db = mysql.createPool({
 // Check database connection
 db.getConnection()
     .then(() => console.log('Connected to the database.'))
-    .catch((err) => console.error('Database connection failed:', (err as Error).message));
+    .catch((err) => {
+        console.error('Database connection failed:', err.message);
+        process.exit(1); // Exit if connection fails
+    });
 
 // Global variable to store the latest data
 let latestArduinoData = 'No data received yet';
@@ -38,6 +42,7 @@ serialPort.on('open', () => {
 // Handle serial port errors
 serialPort.on('error', (err) => {
     console.error('Serial Port Error:', err.message);
+    // process.exit(1);
 });
 
 
@@ -143,7 +148,7 @@ app.get('/api/cards', async (_req, res) => {
         const [results] = await db.query(query);
         res.json(results);
     } catch (error) {
-        console.error('Error executing query:', (error as Error).message);
+        console.error('Error executing query - kade get: ', (error as Error).message);
         res.status(500).json({ error: 'Database query failed' });
     }
 });
@@ -162,7 +167,7 @@ app.get('/api/cards/:id', async (req, res) => {
             res.status(404).json({ message: 'Card not found' });
         }
     } catch (error) {
-        console.error('Error executing query:', (error as Error).message);
+        console.error('Error executing query - kada id get: ', (error as Error).message);
         res.status(500).json({ error: 'Database query failed' });
     }
 });
@@ -183,7 +188,7 @@ app.post('/api/cards/:id', async (req, res) => {
             res.status(404).json({ success: false, message: 'Card not found.' });
         }
     } catch (error) {
-        console.error('Error executing query:', (error as Error).message);
+        console.error('Error executing query - kade id post: ', (error as Error).message);
         res.status(500).json({ success: false, message: 'Database update failed' });
     }
 });
@@ -257,7 +262,7 @@ app.get('/api/users', async (_req, res) => {
         const [results] = await db.query(query);
         res.json(results);
     } catch (error) {
-        console.error('Error executing query:', (error as Error).message);
+        console.error('Error executing query - users get: ', (error as Error).message);
         res.status(500).json({ error: 'Database query failed' });
     }
 });
@@ -280,8 +285,130 @@ app.post('/api/login', async (req, res) => {
             res.status(401).json({ success: false, message: 'Prijava neuspješna. Unesite ispravne podatke.' });
         }
     } catch (error) {
-        console.error('Error executing query:', (error as Error).message);
+        console.error('Error executing query - login: ', (error as Error).message);
         res.status(500).json({ success: false, message: 'An error occurred while processing your request' });
+    }
+});
+
+app.get('/api/notifications', async (_req, res) => {
+    try {
+        // Fetch unread notifications from the database
+        const [notifications] = await db.query('SELECT * FROM notifications WHERE done = false');
+
+        // Check if notifications is an array
+        if (!Array.isArray(notifications)) {
+            throw new Error('Unexpected database response format');
+        }
+
+        // Calculate the number of unread notifications
+        const unreadCount = notifications.length;
+
+        // Send the notifications and unread count as a response
+        res.json({ notifications, unreadCount });
+    } catch (error) {
+        // Log and send an error response
+        console.error('Error fetching notifications:', (error as Error).message);
+        res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+});
+
+
+// @ts-ignore
+app.post('/api/notifications/:id/done', async (req, res) => {
+    const { id } = req.params;
+    const { username } = req.body;
+
+    try {
+        const query = `
+            UPDATE notifications
+            SET done = true, markedBy = ?, doneAt = NOW()
+            WHERE id = ?`;
+
+        const [result]: any = await db.query(query, [username, id]);
+
+        if (result.affectedRows > 0) {
+            res.json({ success: true, message: 'Notification marked as done.' });
+        } else {
+            res.status(404).json({ error: 'Notification not found.' });
+        }
+    } catch (error) {
+        console.error('Error marking notification as done:', error);
+        res.status(500).json({ error: 'Failed to mark notification as done.' });
+    }
+});
+
+app.post('/api/notifications/:id/dismiss', async (req, res) => {
+    const { id } = req.params;
+    const { username } = req.body;
+
+    try {
+        const query = `
+            UPDATE notifications
+            SET done = true, markedBy = ?, doneAt = NOW()
+            WHERE id = ?`;
+
+        const [result]: any = await db.query(query, [username, id]);
+
+        if (result.affectedRows > 0) {
+            res.json({ success: true, message: 'Notification dismissed.' });
+        } else {
+            res.status(404).json({ error: 'Notification not found or cannot be dismissed.' });
+        }
+    } catch (error) {
+        console.error('Error dismissing notification:', error);
+        res.status(500).json({ error: 'Failed to dismiss notification.' });
+    }
+});
+
+async function scheduleNextNotification() {
+    try {
+        // Query the database for the latest 'doneAt' timestamp for 'monthly' notifications
+        const [rows]: [RowDataPacket[], any] = await db.query('SELECT doneAt FROM notifications WHERE type = ? ORDER BY doneAt DESC LIMIT 1', ['monthly']);
+
+        if (rows.length > 0) {
+            // Extract doneAt timestamp from the result
+            const lastDoneAt = rows[0].doneAt;
+            const nextNotificationTime = new Date(lastDoneAt);
+            nextNotificationTime.setDate(nextNotificationTime.getDate() + 30); // Add 30 days to the last done time
+
+            // Calculate the cron schedule string (e.g., at midnight of the next notification date)
+            const cronTime = `${nextNotificationTime.getMinutes()} ${nextNotificationTime.getHours()} ${nextNotificationTime.getDate()} ${nextNotificationTime.getMonth() + 1} *`;
+
+            // Schedule the cron job dynamically based on the calculated next time
+            cron.schedule(cronTime, async () => {
+                try {
+                    await db.query(
+                        `INSERT INTO notifications (message, type, created_at) VALUES (?, ?, ?)`,
+                        ['Mjesečno održavanje kada', 'monthly', new Date()]
+                    );
+                    console.log('Monthly maintenance notification created.');
+                } catch (error) {
+                    console.error('Error executing monthly cleaning cron job:', error);
+                }
+            });
+        } else {
+            console.log('No previous monthly notifications found.');
+            await db.query(
+                `INSERT INTO notifications (message, type, created_at) VALUES (?, ?, ?)`,
+                ['Mjesečno održavanje kada', 'monthly', new Date()]
+            );
+        }
+    } catch (error) {
+        console.error('Error fetching last done timestamp:', error);
+    }
+
+}
+scheduleNextNotification();
+
+// @ts-ignore
+cron.schedule('* * * * *', async () => {
+    try {
+        await db.query(
+            `INSERT INTO notifications (message, type, created_at) VALUES (?, ?, ?)`,
+            ['Potrebna provjera pH nivoa u kadama', 'phCheck', new Date()]
+        );
+    } catch (error) {
+        console.error('Error executing pH check cron job:', error);
     }
 });
 

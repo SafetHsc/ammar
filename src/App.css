@@ -583,3 +583,22 @@ button:hover {
     grid-template-columns: 1fr; /* One card per row on mobile */
   }
 }
+
+.notifications-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.notifications-btn span {
+  font-weight: bold;
+  color: yellow;
+}
+
+.notifications-btn:hover {
+  background-color: #0056b3;
+}

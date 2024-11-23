@@ -5,20 +5,39 @@ import grijacOff from "./assets/grijacOff.jpg";
 import LogsPage from "./Components/LogsPage.tsx";
 import Korisnici from "./Components/Korisnici.tsx";
 import Signali from "./Components/Signali.tsx";
+import Notifications from "./Components/Notifications.tsx";
 import './App.css';
 
 // Header
 const Header: React.FC<{ isLoggedIn: boolean; role: number | null; onLogout: () => void }> = ({ isLoggedIn, role, onLogout }) => {
     const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString([], { hour12: false }));
+    const [notificationsCount, setNotificationsCount] = useState(0);
 
     useEffect(() => {
         const updateTime = () => {
             setCurrentTime(new Date().toLocaleTimeString([], { hour12: false }));
         };
-
         const timer = setInterval(updateTime, 1000);
         return () => clearInterval(timer);
     }, []);
+
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                const response = await fetch('/api/notifications');
+                const data = await response.json();
+                setNotificationsCount(data.unreadCount || 0);
+            } catch (error) {
+                console.error('Error fetching notifications:', error);
+            }
+        };
+
+        if (isLoggedIn) {
+            fetchNotifications();
+            const interval = setInterval(fetchNotifications, 60000); // Refresh every 60 seconds
+            return () => clearInterval(interval);
+        }
+    }, [isLoggedIn]);
 
     return (
         <header className="header">
@@ -31,6 +50,11 @@ const Header: React.FC<{ isLoggedIn: boolean; role: number | null; onLogout: () 
             <div className="header-right">
                 {isLoggedIn ? (
                     <>
+                        <Link to="/notifications">
+                            <button className="notifications-btn">
+                                OBAVIJESTI {notificationsCount > 0 && <span>({notificationsCount})</span>}
+                            </button>
+                        </Link>
                         {role === 1 && (
                             <>
                                 <Link to="/logovi">
@@ -109,7 +133,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
     useEffect(() => {
         const fetchCardData = async () => {
             try {
-                const response = await fetch(`http://localhost:5174/api/cards/${id}`);
+                const response = await fetch(`/api/cards/${id}`);
                 if (!response.ok) {
                     // noinspection ExceptionCaughtLocallyJS
                     throw new Error('Network response was not ok');
@@ -147,7 +171,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
         }
 
         try {
-            const response = await fetch(`http://localhost:5174/api/cards/${id}`, {
+            const response = await fetch(`/api/cards/${id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData),
@@ -156,7 +180,7 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
             if (response.ok) {
                 alert('Temperature uspješno promijenjene!');
 
-                const updatedResponse = await fetch(`http://localhost:5174/api/cards/${id}`);
+                const updatedResponse = await fetch(`/api/cards/${id}`);
                 const updatedCardData: TemperatureData = await updatedResponse.json();
 
                 setCardData(updatedCardData);
@@ -275,15 +299,17 @@ const App: React.FC = () => {
     useEffect(() => {
         const loggedIn = sessionStorage.getItem('isLoggedIn');
         const userRole = sessionStorage.getItem('role');
+        const storedUsername = sessionStorage.getItem('username');   // Retrieve username
         if (loggedIn === 'true') {
             setIsLoggedIn(true);
             setRole(Number(userRole));
+            setUsername(storedUsername || ''); // Set the username if it's available
         }
     }, []);
 
     const fetchTemperatureData = async () => {
         try {
-            const response = await fetch('http://localhost:5174/api/cards');
+            const response = await fetch('/api/cards');
             if (!response.ok) {
                 // noinspection ExceptionCaughtLocallyJS
                 throw new Error('Network response was not ok');
@@ -304,7 +330,7 @@ const App: React.FC = () => {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const response = await fetch('http://localhost:5174/api/login', {
+        const response = await fetch('/api/login', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({username, password}),
@@ -317,6 +343,7 @@ const App: React.FC = () => {
                 setRole(result.role);
                 sessionStorage.setItem('isLoggedIn', 'true');
                 sessionStorage.setItem('role', result.role);
+                sessionStorage.setItem('username', username);  // Store username
                 navigate('/'); // Redirect to homepage
             } else {
                 alert('Prijava neuspješna. Unesite ispravne podatke.');
@@ -331,8 +358,10 @@ const App: React.FC = () => {
         setRole(null);
         setUsername('');  // briše kredencijale iz forme
         setPassword('');
+        setUsername('');  // Clear username in state
         sessionStorage.removeItem('isLoggedIn');
         sessionStorage.removeItem('role');
+        sessionStorage.removeItem('username');
         navigate('/');
     };
 
@@ -401,6 +430,7 @@ const App: React.FC = () => {
                 )
             } />
             <Route path="/korisnici" element={isLoggedIn && role === 1 ? <Korisnici /> : <InvalidLink />} />
+            <Route path="/notifications" element={isLoggedIn ? <Notifications username={username} /> : <InvalidLink />} />
             <Route path="/signali" element={
                 <div className="signali">
                     <h2 style={{fontSize:"24px"}} >Signali</h2>
