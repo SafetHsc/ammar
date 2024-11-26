@@ -8,7 +8,7 @@ export default defineConfig({
     host: '0.0.0.0', // Listen on all interfaces
     port: 5173,
     proxy: {
-      '/api': 'http://192.168.137.37:5174', // Backend server address, change localhost to IP for network
+      '/api': 'http://localhost:5174', // Backend server address, change localhost to IP for network
     },
   },
 })

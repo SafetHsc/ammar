@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import {Link} from "react-router-dom";
 
-const Notifications: React.FC<{username: string | null }> = ({username }) => {
+const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
     const [notifications, setNotifications] = useState<any[]>([]);
 
+    // Fetch notifications from the server
     const fetchNotifications = async () => {
         try {
             const response = await fetch('/api/notifications');
@@ -14,7 +16,6 @@ const Notifications: React.FC<{username: string | null }> = ({username }) => {
     };
 
     const markAsDone = async (id: number) => {
-
         try {
             const response = await fetch(`/api/notifications/${id}/done`, {
                 method: 'POST',
@@ -26,7 +27,7 @@ const Notifications: React.FC<{username: string | null }> = ({username }) => {
 
             if (response.ok) {
                 alert('Notification marked as done');
-                await fetchNotifications();
+                fetchNotifications(); // Refresh the list after marking as done
             } else {
                 const errorData = await response.json();
                 alert(errorData.error || 'Failed to mark notification as done');
@@ -37,7 +38,6 @@ const Notifications: React.FC<{username: string | null }> = ({username }) => {
     };
 
     const dismissNotification = async (id: number) => {
-
         try {
             const response = await fetch(`/api/notifications/${id}/dismiss`, {
                 method: 'POST',
@@ -48,24 +48,37 @@ const Notifications: React.FC<{username: string | null }> = ({username }) => {
             });
 
             if (response.ok) {
-                alert('Notification marked as done');
-                await fetchNotifications();
+                alert('Notification dismissed');
+                fetchNotifications(); // Refresh the list after dismissing
             } else {
                 const errorData = await response.json();
-                alert(errorData.error || 'Failed to mark notification as done');
+                alert(errorData.error || 'Failed to dismiss notification');
             }
         } catch (error) {
-            console.error('Error marking notification as done:', error);
+            console.error('Error dismissing notification:', error);
         }
     };
 
+    // Fetch notifications initially and set up polling for periodic refresh
     useEffect(() => {
+        // Fetch notifications on mount
         fetchNotifications();
-    }, []);
+
+        // Set up polling to refresh notifications every 10 seconds
+        const interval = setInterval(() => {
+            fetchNotifications();
+        }, 10000); // 10000 ms = 10 seconds
+
+        // Clean up interval on component unmount
+        return () => clearInterval(interval);
+    }, []); // Empty dependency array means this runs once when the component mounts
 
     return (
         <div>
-            <h1>OBAVIJESTI</h1>
+            <div className="admin-log">
+                <h1>OBAVIJESTI</h1>
+                <Link to="/" className="nazad" >Nazad</Link>
+            </div>
             <ul>
                 {notifications.map((notification) => (
                     <li key={notification.id}>
@@ -79,7 +92,7 @@ const Notifications: React.FC<{username: string | null }> = ({username }) => {
                                     <button onClick={() => dismissNotification(notification.id)}>Označi završenim.</button>
                                 )}
                             </>
-                        ):<></>}
+                        ) : null}
                     </li>
                 ))}
             </ul>

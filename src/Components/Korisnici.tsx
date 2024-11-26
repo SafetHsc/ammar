@@ -11,7 +11,7 @@ const Korisnici: React.FC = () => {
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const response = await fetch('http://localhost:5174/api/users', {
+        const response = await fetch('/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: createUsername, password: createPassword }),
@@ -31,7 +31,7 @@ const Korisnici: React.FC = () => {
     const handleDeleteUser = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const response = await fetch('http://localhost:5174/api/del-users', {
+        const response = await fetch('/api/del-users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: deleteUsername }),

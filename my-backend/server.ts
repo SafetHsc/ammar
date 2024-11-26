@@ -401,7 +401,7 @@ async function scheduleNextNotification() {
 scheduleNextNotification();
 
 // @ts-ignore
-cron.schedule('* * * * *', async () => {
+cron.schedule('0 0 * * *', async () => {
     try {
         await db.query(
             `INSERT INTO notifications (message, type, created_at) VALUES (?, ?, ?)`,
@@ -411,6 +411,129 @@ cron.schedule('* * * * *', async () => {
         console.error('Error executing pH check cron job:', error);
     }
 });
+
+app.post('/api/nalog', async (req, res) => {
+    const { broj_naloga, firma, broj_komada, opis } = req.body;
+    const query = 'INSERT INTO nalog (broj_naloga, firma, broj_komada, opis) VALUES (?, ?, ?, ?)';
+
+    try {
+        // Perform the query and destructure the result
+        // @ts-ignore
+        const [result]: [ResultSetHeader] = await db.query(query, [
+            broj_naloga,
+            firma,
+            JSON.stringify(broj_komada),
+            opis || null
+        ]);
+
+        // Ensure you access `insertId` from the ResultSetHeader
+        res.status(201).json({ id: result.insertId });
+    } catch (error) {
+        console.error('Error creating nalog:', (error as Error).message);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// @ts-ignore
+app.post('/api/sarza', async (req, res) => {
+    const { nalog_id, broj_komada, alat, skart, kada_id } = req.body;
+
+    // Queries
+    const queryCheck = 'SELECT broj_komada FROM nalog WHERE id = ?'; // Get Nalog's available broj_komada
+    const queryInsert = 'INSERT INTO sarza (nalog_id, broj_komada, alat, skart, kada_id) VALUES (?, ?, ?, ?, ?)';
+    const queryTotal = 'SELECT SUM(broj_komada) AS total FROM sarza WHERE nalog_id = ?'; // Get total used komada for this Nalog
+
+    try {
+        // Check Nalog's broj_komada
+        const [nalog]: [RowDataPacket[], FieldPacket[]] = await db.query(queryCheck, [nalog_id]);
+        if (nalog.length === 0) {
+            return res.status(404).json({ error: 'Nalog not found' });
+        }
+
+        // Parse Nalog's broj_komada (stored as JSON) and sum the available number of komada for each alat
+        const nalogBrojKomada = JSON.parse(nalog[0].broj_komada).reduce(
+            (sum: number, obj: { number: number }) => sum + obj.number,
+            0
+        );
+
+        // Check total used broj_komada for Sarza from existing entries
+        const [totalResult]: [RowDataPacket[], FieldPacket[]] = await db.query(queryTotal, [nalog_id]);
+        const totalSarzaKomada = totalResult[0]?.total || 0; // Default to 0 if total is null
+
+        // Validation: Ensure new Sarza does not exceed the available broj_komada for this Nalog
+        if (totalSarzaKomada + broj_komada > nalogBrojKomada) {
+            return res.status(400).json({ error: 'Exceeds total broj komada for this nalog' });
+        }
+
+        // Insert new Sarza
+        const [result]: [ResultSetHeader, FieldPacket[]] = await db.query(queryInsert, [
+            nalog_id,
+            broj_komada,
+            alat,
+            JSON.stringify(skart),
+            kada_id,
+        ]);
+        res.status(201).json({ id: result.insertId });
+    } catch (error) {
+        console.error('Error creating sarza:', (error as Error).message);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+
+
+app.get('/api/nalog', async (_req, res) => {
+    const query = 'SELECT id, broj_naloga, firma, broj_komada, opis, completed FROM nalog';
+
+    try {
+        const [results]: [any[], FieldPacket[]] = await db.query(query); // Ensure results is typed as an array
+        results.forEach((nalog: any) => {
+            if (nalog.broj_komada) {
+                nalog.broj_komada = JSON.parse(nalog.broj_komada); // Parse JSON field safely
+            }
+        });
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching nalogs:', (error as Error).message);
+        res.status(500).json({ error: 'Database query failed' });
+    }
+});
+
+
+app.get('/api/sarza', async (_req, res) => {
+    const query = `
+        SELECT s.id, s.nalog_id, s.broj_komada, s.alat, s.skart, c.name AS kada_name
+        FROM sarza s
+                 JOIN cards c ON s.kada_id = c.id
+    `;
+
+    try {
+        const [results]: [any[], FieldPacket[]] = await db.query(query); // Ensure results is typed as an array
+        results.forEach((sarza: any) => {
+            if (sarza.skart) {
+                sarza.skart = JSON.parse(sarza.skart); // Parse JSON field safely
+            }
+        });
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching sarzas:', (error as Error).message);
+        res.status(500).json({ error: 'Database query failed' });
+    }
+});
+
+
+app.get('/api/nalog/incomplete', async (_req, res) => {
+    const query = 'SELECT id, broj_naloga FROM nalog WHERE completed = "no"';
+
+    try {
+        const [results] = await db.query(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching incomplete nalogs:', (error as Error).message);
+        res.status(500).json({ error: 'Database query failed' });
+    }
+});
+
 
 // Start the server
 app.listen(port, () => {
