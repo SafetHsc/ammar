@@ -1,20 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
-import LogsPage from "./Components/LogsPage.tsx";
-import Korisnici from "./Components/Korisnici.tsx";
-import Signali from "./Components/Signali.tsx";
-import Notifications from "./Components/Notifications.tsx";
-import NaloziSarze from "./Components/NaloziSarze.tsx";
-import NalogForm from "./Components/NalogForm.tsx";
-import SarzaForm from "./Components/SarzaForm.tsx";
-import ViewNalog from "./Components/ViewNalog.tsx";
-import ViewSarza from "./Components/ViewSarza.tsx";
-import Header from "./Components/Header.tsx";
-import Card from "./Components/Card.tsx";
-import CardDetail from "./Components/CardDetail.tsx";
+import Header from "./components/Header.tsx";
+import Card from "./components/Card.tsx";
+import CardDetail from "./components/CardDetail.tsx";
+import LogsPage from "./components/LogsPage.tsx";
+import Korisnici from "./components/Korisnici.tsx";
+import Signali from "./components/Signali.tsx";
+import Notifications from "./components/Notifications.tsx";
+import NaloziSarze from "./components/NaloziSarze.tsx";
+import CreateNalog from "./components/CreateNalog.tsx";
+import CreateSarza from "./components/CreateSarza.tsx";
+import ViewNalog from "./components/ViewNalog.tsx";
+import ViewSarza from "./components/ViewSarza.tsx";
+
 import './App.css';
-
-
 
 const InvalidLink: React.FC = () => {
     return (
@@ -187,8 +186,8 @@ const App: React.FC = () => {
                 )
             } />
             <Route path="/nalozi-sarze" element={isLoggedIn ? <NaloziSarze /> : <InvalidLink />} />
-            <Route path="/novi-nalog" element={isLoggedIn ? <NalogForm /> : <InvalidLink />} />
-            <Route path="/nova-sarza" element={isLoggedIn ? <SarzaForm /> : <InvalidLink />} />
+            <Route path="/novi-nalog" element={isLoggedIn ? <CreateNalog /> : <InvalidLink />} />
+            <Route path="/nova-sarza" element={isLoggedIn ? <CreateSarza /> : <InvalidLink />} />
             <Route path="/vidi-nalog" element={isLoggedIn ? <ViewNalog /> : <InvalidLink />} />
             <Route path="/vidi-sarze" element={isLoggedIn ? <ViewSarza /> : <InvalidLink />} />
             <Route path="/korisnici" element={isLoggedIn && role === 1 ? <Korisnici /> : <InvalidLink />} />

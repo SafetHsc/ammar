@@ -412,125 +412,93 @@ cron.schedule('0 0 * * *', async () => {
     }
 });
 
-app.post('/api/nalog', async (req, res) => {
-    const { broj_naloga, firma, broj_komada, opis } = req.body;
-    const query = 'INSERT INTO nalog (broj_naloga, firma, broj_komada, opis) VALUES (?, ?, ?, ?)';
-
+app.get('/api/nalogs/incomplete', async (_req, res) => {
     try {
-        // Perform the query and destructure the result
-        // @ts-ignore
-        const [result]: [ResultSetHeader] = await db.query(query, [
+        let query = 'SELECT * FROM nalogs WHERE completed = 0 ';
+
+        const [results] = await db.execute(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching nalogs:', error);
+        res.status(500).json({ message: 'Error fetching nalogs' });
+    }
+});
+
+app.post('/api/nalogs', async (req, res) => {
+    const { broj_naloga, firma, broj_komada_alat, total_broj_komada, opis, completed } = req.body;
+    try {
+        const query = `
+            INSERT INTO nalogs (broj_naloga, firma, broj_komada_alat, total_broj_komada, opis, completed)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+
+        // Awaiting db.execute and handling the response correctly
+        const result = await db.execute(query, [
             broj_naloga,
             firma,
-            JSON.stringify(broj_komada),
-            opis || null
+            JSON.stringify(broj_komada_alat),
+            total_broj_komada,
+            opis,
+            completed ? 1 : 0,
         ]);
 
-        // Ensure you access `insertId` from the ResultSetHeader
-        res.status(201).json({ id: result.insertId });
+        // Accessing insertId correctly
+        const insertId = (result[0] as ResultSetHeader).insertId;
+
+        res.status(201).json({ message: 'Nalog created successfully', id: insertId });
     } catch (error) {
-        console.error('Error creating nalog:', (error as Error).message);
-        res.status(500).json({ error: 'Database error' });
+        console.error('Error creating nalog:', error);
+        res.status(500).json({ message: 'Error creating nalog' });
     }
 });
 
-// @ts-ignore
-app.post('/api/sarza', async (req, res) => {
-    const { nalog_id, broj_komada, alat, skart, kada_id } = req.body;
+// POST /api/sarzas
+app.post('/api/sarzas', async (req, res) => {
+    const { nalog_id, broj_komada_alat, skart, kada_id } = req.body;
 
-    // Queries
-    const queryCheck = 'SELECT broj_komada FROM nalog WHERE id = ?'; // Get Nalog's available broj_komada
-    const queryInsert = 'INSERT INTO sarza (nalog_id, broj_komada, alat, skart, kada_id) VALUES (?, ?, ?, ?, ?)';
-    const queryTotal = 'SELECT SUM(broj_komada) AS total FROM sarza WHERE nalog_id = ?'; // Get total used komada for this Nalog
+    // Calculate total_br_kmd
+    const total_br_kmd = broj_komada_alat.reduce((acc: number, item: any) => acc + parseInt(item.broj_komada), 0);
+
+    // Calculate total_skart (if skart array is provided)
+    const total_skart = skart.length ? skart.reduce((acc: number, item: any) => acc + parseInt(item.skart), 0) : 0;
 
     try {
-        // Check Nalog's broj_komada
-        const [nalog]: [RowDataPacket[], FieldPacket[]] = await db.query(queryCheck, [nalog_id]);
-        if (nalog.length === 0) {
-            return res.status(404).json({ error: 'Nalog not found' });
-        }
+        // Serialize the skart array to store it in the database
+        const serialized_skart = skart.length ? JSON.stringify(skart) : null;
 
-        // Parse Nalog's broj_komada (stored as JSON) and sum the available number of komada for each alat
-        const nalogBrojKomada = JSON.parse(nalog[0].broj_komada).reduce(
-            (sum: number, obj: { number: number }) => sum + obj.number,
-            0
-        );
+        // Insert into the sarzas table
+        const query = `
+            INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, total_skart, kada_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
 
-        // Check total used broj_komada for Sarza from existing entries
-        const [totalResult]: [RowDataPacket[], FieldPacket[]] = await db.query(queryTotal, [nalog_id]);
-        const totalSarzaKomada = totalResult[0]?.total || 0; // Default to 0 if total is null
-
-        // Validation: Ensure new Sarza does not exceed the available broj_komada for this Nalog
-        if (totalSarzaKomada + broj_komada > nalogBrojKomada) {
-            return res.status(400).json({ error: 'Exceeds total broj komada for this nalog' });
-        }
-
-        // Insert new Sarza
-        const [result]: [ResultSetHeader, FieldPacket[]] = await db.query(queryInsert, [
+        // Execute the query
+        const [result] = await db.execute(query, [
             nalog_id,
-            broj_komada,
-            alat,
-            JSON.stringify(skart),
+            JSON.stringify(broj_komada_alat),  // Serialize the array of objects
+            total_br_kmd,
+            serialized_skart,  // Store the JSON string of skart
+            total_skart,
             kada_id,
         ]);
-        res.status(201).json({ id: result.insertId });
+
+        // Send response with inserted ID
+        res.json({ message: 'Sarza created successfully', id: (result as any).insertId });
     } catch (error) {
-        console.error('Error creating sarza:', (error as Error).message);
-        res.status(500).json({ error: 'Database error' });
+        console.error('Error creating Sarza:', error);
+        res.status(500).json({ message: 'Failed to create Sarza', error: (error as Error).message });
     }
 });
 
 
-
-app.get('/api/nalog', async (_req, res) => {
-    const query = 'SELECT id, broj_naloga, firma, broj_komada, opis, completed FROM nalog';
-
+// GET /api/sarzas
+app.get('/api/sarzas', async (_req, res) => {
     try {
-        const [results]: [any[], FieldPacket[]] = await db.query(query); // Ensure results is typed as an array
-        results.forEach((nalog: any) => {
-            if (nalog.broj_komada) {
-                nalog.broj_komada = JSON.parse(nalog.broj_komada); // Parse JSON field safely
-            }
-        });
+        const [results] = await db.execute('SELECT * FROM sarzas');
         res.json(results);
     } catch (error) {
-        console.error('Error fetching nalogs:', (error as Error).message);
-        res.status(500).json({ error: 'Database query failed' });
-    }
-});
-
-
-app.get('/api/sarza', async (_req, res) => {
-    const query = `
-        SELECT s.id, s.nalog_id, s.broj_komada, s.alat, s.skart, c.name AS kada_name
-        FROM sarza s
-                 JOIN cards c ON s.kada_id = c.id
-    `;
-
-    try {
-        const [results]: [any[], FieldPacket[]] = await db.query(query); // Ensure results is typed as an array
-        results.forEach((sarza: any) => {
-            if (sarza.skart) {
-                sarza.skart = JSON.parse(sarza.skart); // Parse JSON field safely
-            }
-        });
-        res.json(results);
-    } catch (error) {
-        console.error('Error fetching sarzas:', (error as Error).message);
-        res.status(500).json({ error: 'Database query failed' });
-    }
-});
-
-
-app.get('/api/nalog/incomplete', async (_req, res) => {
-    const query = 'SELECT id, broj_naloga FROM nalog WHERE completed = "no"';
-
-    try {
-        const [results] = await db.query(query);
-        res.json(results);
-    } catch (error) {
-        console.error('Error fetching incomplete nalogs:', (error as Error).message);
-        res.status(500).json({ error: 'Database query failed' });
+        console.error('Error fetching sarzas:', error);
+        res.status(500).json({ message: 'Error fetching sarzas' });
     }
 });
 
