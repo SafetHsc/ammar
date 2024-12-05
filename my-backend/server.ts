@@ -502,7 +502,20 @@ app.get('/api/sarzas', async (_req, res) => {
     }
 });
 
+// @ts-ignore
+app.get('/api/sarzas/linked/:nalogId', async (req, res) => {
+    const { nalogId } = req.params;
 
+    try {
+        // Perform the query using async/await
+        const [results] = await db.query('SELECT * FROM sarzas WHERE nalog_id = ?', [nalogId]);
+
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching linked Sarzas:', error);
+        return res.status(500).send('Error fetching linked Sarzas');
+    }
+});
 // Start the server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
