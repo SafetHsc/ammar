@@ -428,8 +428,8 @@ app.post('/api/nalogs', async (req, res) => {
     const { broj_naloga, firma, broj_komada_alat, total_broj_komada, opis, completed } = req.body;
     try {
         const query = `
-            INSERT INTO nalogs (broj_naloga, firma, broj_komada_alat, total_broj_komada, opis, completed)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO nalogs (broj_naloga, firma, broj_komada_alat, total_broj_komada, opis, completed, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, NOW())
         `;
 
         // Awaiting db.execute and handling the response correctly
@@ -468,8 +468,8 @@ app.post('/api/sarzas', async (req, res) => {
 
         // Insert into the sarzas table
         const query = `
-            INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, total_skart, kada_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, total_skart, kada_id, created_at, completed)
+            VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
         `;
 
         // Execute the query
@@ -516,6 +516,67 @@ app.get('/api/sarzas/linked/:nalogId', async (req, res) => {
         return res.status(500).send('Error fetching linked Sarzas');
     }
 });
+
+// @ts-ignore
+app.get('/api/nalogs/:id/sarzas', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const query = `
+            SELECT id FROM sarzas WHERE nalog_id = ?
+        `;
+
+        // Execute the query to fetch incomplete sarzas for the given nalog_id
+        const [rows] = await db.execute<RowDataPacket[]>(query, [id]);
+
+        // If no sarzas are found, return an empty array
+        if (rows.length === 0) {
+            return res.json([]);
+        }
+
+        // Map the rows to extract the IDs
+        const sarzas = rows.map((row) => row.id);
+
+        // Send the result back as JSON
+        res.json(sarzas);
+    } catch (error) {
+        console.error('Error fetching sarzas:', error);
+        res.status(500).json({ message: 'Error fetching sarzas' });
+    }
+});
+
+
+// Fetch nalogs with related sarzas
+app.get('/api/nalogs', async (_req, res) => {
+    try {
+        const query = `
+            SELECT 
+                nalogs.id, 
+                nalogs.broj_naloga, 
+                nalogs.firma, 
+                nalogs.broj_komada_alat, 
+                nalogs.total_broj_komada, 
+                nalogs.opis, 
+                nalogs.completed, 
+                nalogs.created_at, 
+                nalogs.completed_at,
+                GROUP_CONCAT(sarzas.id) AS sarze
+            FROM nalogs
+            LEFT JOIN sarzas ON nalogs.broj_naloga = sarzas.nalog_id
+            GROUP BY nalogs.id
+        `;
+        const [results] = await db.execute(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching nalogs:', error);
+        res.status(500).json({ message: 'Error fetching nalogs' });
+    }
+});
+
+
+
+
+
 // Start the server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);

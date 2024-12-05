@@ -83,40 +83,38 @@ const CreateNalog: React.FC = () => {
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f4f4f4' }}>
-            <div style={{ maxWidth: '600px', padding: '20px', border: '1px solid #ddd', borderRadius: '10px', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', backgroundColor: '#fff', fontFamily: 'Arial, sans-serif', width: '100%' }}>
-                <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333'}}>Kreiraj Nalog</h2>
+        <div className="createnalog">
+            <div className="nalog-div">
+                <h2 className="nalog-h2">Kreiraj Nalog</h2>
 
                 {/* Back Link */}
-                <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                    <Link to="/nalozi-sarze" className="nazad">Nazad</Link>
-                </div>
+                <div className="nalog-nazad"><Link to="/nalozi-sarze" className="nazad">Nazad</Link></div>
 
-                <form style={{ display: 'flex', flexDirection: 'column' }} onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Broj Naloga:</label>
+                <form className="nalog-form" onSubmit={handleSubmit}>
+                    <div className="broj-naloga">
+                        <label className="nalog-label">Broj Naloga:</label>
                         <input
                             type="text"
                             value={formData.broj_naloga}
                             onChange={(e) => setFormData({ ...formData, broj_naloga: e.target.value })}
                             required
-                            style={{ width: 'calc(100% - 10px)', padding: '8px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '5px' }}
+                            className="broj-naloga-input"
                         />
                     </div>
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Firma:</label>
+                    <div className="broj-naloga">
+                        <label className="nalog-label">Firma:</label>
                         <input
                             type="text"
                             value={formData.firma}
                             onChange={(e) => setFormData({ ...formData, firma: e.target.value })}
                             required
-                            style={{ width: 'calc(100% - 10px)', padding: '8px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '5px' }}
+                            className="firma-input"
                         />
                     </div>
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Broj Komada + Alat:</label>
+                    <div className="broj-naloga">
+                        <label className="nalog-label">Broj Komada + Alat:</label>
                         {formData.broj_komada_alat.map((input, index) => (
-                            <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                            <div key={index} className="nalog-brkmd-alat">
                                 <input
                                     type="number"
                                     name="broj_komada"
@@ -126,7 +124,7 @@ const CreateNalog: React.FC = () => {
                                     min={0}
                                     max={1000}
                                     required
-                                    style={{ flex: 1, marginRight: '10px', padding: '8px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '5px' }}
+                                    className="input-brkmd-nalog"
                                 />
                                 <input
                                     type="text"
@@ -135,43 +133,33 @@ const CreateNalog: React.FC = () => {
                                     onChange={(e) => handleInputChange(e, index)}
                                     placeholder="Alat"
                                     required
-                                    style={{ flex: 2, padding: '8px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '5px' }}
+                                    className="nalog-alat"
                                 />
                                 {formData.broj_komada_alat.length > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveInput(index)}
-                                        style={{ padding: '5px 10px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', marginLeft: '10px' }}
-                                    >
-                                        Ukloni
-                                    </button>
+                                    <button type="button" onClick={() => handleRemoveInput(index)} className="nalog-ukloni-btn">Ukloni</button>
                                 )}
                             </div>
                         ))}
                         <button
                             type="button"
                             onClick={handleAddInput}
-                            style={{ padding: '8px 12px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '5px', cursor: formData.broj_komada_alat.length >= 3 ? 'not-allowed' : 'pointer' }}
+                            className="nalog-dodaj-input"
+                            style={{ cursor: formData.broj_komada_alat.length >= 3 ? 'not-allowed' : 'pointer' }}
                             disabled={formData.broj_komada_alat.length >= 3}
                         >
                             + Dodaj
                         </button>
                     </div>
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '5px', color: '#555' }}>Opis:</label>
+                    <div className="broj-naloga">
+                        <label className="nalog-label">Opis:</label>
                         <input
                             type="text"
                             value={formData.opis || ''}
                             onChange={(e) => setFormData({ ...formData, opis: e.target.value })}
-                            style={{ width: 'calc(100% - 10px)', padding: '8px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '5px' }}
+                            className="broj-naloga-input"
                         />
                     </div>
-                    <button
-                        type="submit"
-                        style={{ padding: '11px 0', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-                    >
-                        Kreiraj Nalog
-                    </button>
+                    <button type="submit" className="nalog-submit-btn">Kreiraj Nalog</button>
                 </form>
             </div>
         </div>

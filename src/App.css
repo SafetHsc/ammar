@@ -634,4 +634,295 @@ button:hover {
   background-color: #0056b3;
 }
 
+.createsarza {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f4f4f4;
+}
+
+.sarza-div {
+  max-width: 600px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  font-family: Arial, sans-serif;
+  width: 100%;
+}
+
+.sarza-h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.sarza-nazad {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.sarza-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-div {
+  margin-bottom: 15px;
+}
+
+.sarza-labels {
+  display: block;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+.sarza-dropdown {
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.sarza-bk-alat-div {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sarza-bk {
+  flex: 1;
+  margin-right: 10px;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  min-width: 100px;
+}
+
+.sarza-alat {
+  flex: 2;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  min-width: 150px;
+}
+
+.sarza-remove-btn {
+  padding: 5px 10px;
+  background-color: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+  min-width: 80px;
+}
+
+.sarza-add-bkalat-btn {
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.linked-sarza {
+  gap: 3px;
+  margin-left: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  min-width: 150px;
+  margin-right: 10px;
+}
+
+.sarza-submit {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.sarza-submit-btn {
+  width: 100%;
+  padding: 11px 0;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.createnalog {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f4f4f4;
+}
+
+.nalog-div {
+  max-width: 600px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  font-family: Arial, sans-serif;
+  width: 100%;
+}
+
+.nalog-h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.nalog-nazad {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.nalog-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.broj-naloga {
+  margin-bottom: 15px;
+}
+
+.nalog-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+.broj-naloga-input {
+  width: calc(100% - 10px);
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.firma-input {
+  width: calc(100% - 10px);
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.nalog-brkmd-alat {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.input-brkmd-nalog {
+  flex: 1;
+  margin-right: 10px;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.nalog-alat {
+  flex: 2;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.nalog-ukloni-btn {
+  padding: 5px 10px;
+  background-color: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.nalog-dodaj-input {
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+}
+
+.nalog-submit-btn {
+  padding: 11px 0;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.view-nalogs {
+  margin: 20px auto;
+  max-width: 1200px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nalogs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: Arial, sans-serif;
+  margin: 10px 0;
+  background-color: white;
+}
+
+.nalogs-table th, .nalogs-table td {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #ddd;
+}
+
+.nalogs-table th {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.nalogs-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.nalogs-table tr:hover {
+  background-color: #ddd;
+}
+
+.nalogs-table td {
+  vertical-align: top;
+}
+
+.nalogs-table td div {
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .nalogs-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .nalogs-table th, .nalogs-table td {
+    padding: 8px;
+  }
+}
+
+
 

@@ -7,7 +7,7 @@ const CreateSarza = () => {
     const [skartLinkSarza, setSkartLinkSarza] = useState<any[]>([{ skart: '', linkedSarza: '', alat: '' }]); // Start with one default field
     const [kadaId, setKadaId] = useState<number | null>(null); // Dropdown for kada_id
     const [nalogId, setNalogId] = useState<string>(''); // Selected nalog_id (broj_naloga)
-    const [message] = useState<string>(''); // Message for success or error
+    // const [message] = useState<string>(''); // Message for success or error
     const [allKadas, setAllKadas] = useState<any[]>([]); // List of kadas to populate the kada dropdown
     // @ts-ignore
     const [selectedKada, setSelectedKada] = useState<any>(null); // Selected kada for temperature display
@@ -142,32 +142,17 @@ const CreateSarza = () => {
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f4f4f4' }}>
-            <div style={{
-                maxWidth: '600px',
-                padding: '20px',
-                border: '1px solid #ddd',
-                borderRadius: '10px',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-                backgroundColor: '#fff',
-                fontFamily: 'Arial, sans-serif',
-                width: '100%'
-            }}>
-                <h2 style={{textAlign: 'center', marginBottom: '20px', color: '#333'}}>Kreiraj Šaržu</h2>
-                <div style={{marginBottom: '20px', textAlign: 'center'}}>
+        <div className="createsarza">
+            <div className="sarza-div">
+                <h2 className="sarza-h2">Kreiraj Šaržu</h2>
+                <div className="sarza-nazad">
                     <Link to="/nalozi-sarze" className="nazad">Nazad</Link>
                 </div>
-                <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column'}}>
+                <form onSubmit={handleSubmit} className="sarza-form">
                     {/* Dropdown for nalog selection */}
-                    <div style={{marginBottom: '15px'}}>
-                        <label style={{display: 'block', marginBottom: '5px', color: '#555'}}>Nalog</label>
-                        <select value={nalogId} onChange={(e) => setNalogId(e.target.value)} required style={{
-                            width: '100%',
-                            padding: '8px',
-                            fontSize: '14px',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px'
-                        }}>
+                    <div className="input-div">
+                        <label className="sarza-labels">Nalog</label>
+                        <select value={nalogId} onChange={(e) => setNalogId(e.target.value)} required className="sarza-dropdown">
                             <option value="">Odaberi Nalog</option>
                             {nalogs.map((nalog) => (
                                 <option key={nalog.id} value={nalog.broj_naloga}>
@@ -178,124 +163,35 @@ const CreateSarza = () => {
                     </div>
 
                     {/* Broj Komada and Alat Pair Input */}
-                    <div style={{marginBottom: '15px'}}>
-                        <label style={{display: 'block', marginBottom: '5px', color: '#555'}}>Broj Komada i Alat</label>
+                    <div className="input-div">
+                        <label className="sarza-labels">Broj Komada i Alat</label>
                         {brojKomadaAlat.map((item, index) => (
-                            <div key={index} style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
-                                <input
-                                    type="number"
-                                    value={item.broj_komada}
+                            <div key={index} className="sarza-bk-alat-div">
+                                <input type="number" value={item.broj_komada}
                                     onChange={(e) => handleChangeBrojKomadaAlat(index, 'broj_komada', e.target.value)}
-                                    placeholder="Broj Komada"
-                                    required
-                                    style={{
-                                        flex: 1,
-                                        marginRight: '10px',
-                                        padding: '8px',
-                                        fontSize: '14px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        minWidth: '100px', // Added min-width to prevent shrinking
-                                    }}
-                                />
-                                <input
-                                    type="text"
-                                    value={item.alat}
-                                    onChange={(e) => handleChangeBrojKomadaAlat(index, 'alat', e.target.value)}
-                                    placeholder="Alat"
-                                    required
-                                    style={{
-                                        flex: 2,
-                                        padding: '8px',
-                                        fontSize: '14px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        minWidth: '150px', // Added min-width for consistency
-                                    }}
-                                />
+                                    placeholder="Broj Komada" required className="sarza-bk"/>
+                                <input type="text" value={item.alat} onChange={(e) => handleChangeBrojKomadaAlat(index, 'alat', e.target.value)}
+                                    placeholder="Alat" required className="sarza-alat"/>
                                 {brojKomadaAlat.length > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveBrojKomadaAlat(index)}
-                                        style={{
-                                            padding: '5px 10px',
-                                            backgroundColor: '#dc3545',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '5px',
-                                            cursor: 'pointer',
-                                            marginLeft: '10px',
-                                            minWidth: '80px', // Added min-width to ensure button size
-                                        }}
-                                    >
-                                        Ukloni
-                                    </button>
-                                )}
+                                    <button type="button" onClick={() => handleRemoveBrojKomadaAlat(index)} className="sarza-remove-btn">Ukloni</button>)}
                             </div>
                         ))}
                         {brojKomadaAlat.length < 3 && (
-                            <button type="button" onClick={handleAddBrojKomadaAlat} style={{
-                                padding: '8px 12px',
-                                backgroundColor: '#007bff',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '5px',
-                                cursor: 'pointer'
-                            }}>
-                                + Dodaj
-                            </button>
+                            <button type="button" onClick={handleAddBrojKomadaAlat} className="sarza-add-bkalat-btn">+ Dodaj</button>
                         )}
                     </div>
 
                     {/* Skart, Linked Sarza, and Alat Pair Input */}
-                    <div style={{marginBottom: '15px'}}>
-                        <label style={{display: 'block', marginBottom: '5px', color: '#555'}}>
-                            Škart, Alat i iz šarže:
-                        </label>
+                    <div className="input-div">
+                        <label className="sarza-labels">Škart, Alat i iz šarže:</label>
                         {skartLinkSarza.map((item, index) => (
-                            <div key={index} style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
-                                <input
-                                    type="number"
-                                    value={item.skart}
-                                    onChange={(e) => handleChangeSkartLinkSarza(index, 'skart', e.target.value)}
-                                    placeholder="Skart"
-                                    style={{
-                                        flex: 1,
-                                        marginRight: '10px',
-                                        padding: '8px',
-                                        fontSize: '14px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        minWidth: '100px', // Prevent shrinking
-                                    }}
-                                />
-                                <input
-                                    type="text"
-                                    value={item.alat ?? ''}
-                                    onChange={(e) => handleChangeSkartLinkSarza(index, 'alat', e.target.value)}
-                                    placeholder="Alat"
-                                    style={{
-                                        flex: 2,
-                                        padding: '8px',
-                                        fontSize: '14px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        minWidth: '150px', // Prevent shrinking
-                                    }}
-                                />
-                                <select
-                                    value={item.linkedSarza || ''}
-                                    onChange={(e) => handleChangeSkartLinkSarza(index, 'linkedSarza', e.target.value)}
-                                    style={{
-                                        gap: '3px',
-                                        marginLeft: '8px',
-                                        fontSize: '14px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '5px',
-                                        minWidth: '150px',
-                                        marginRight: '10px',
-                                    }}
-                                >
+                            <div key={index} className="sarza-bk-alat-div">
+                                <input type="number" value={item.skart} onChange={(e) => handleChangeSkartLinkSarza(index, 'skart', e.target.value)}
+                                    placeholder="Skart" className="sarza-bk"/>
+                                <input type="text" value={item.alat ?? ''} onChange={(e) => handleChangeSkartLinkSarza(index, 'alat', e.target.value)} placeholder="Alat"
+                                    className="sarza-alat"/>
+                                <select value={item.linkedSarza || ''} onChange={(e) => handleChangeSkartLinkSarza(index, 'linkedSarza', e.target.value)}
+                                    className="linked-sarza">
                                     <option value="">Odaberi Šaržu</option>
                                     {linkedSarzas.map((sarza) => (
                                         <option key={sarza.id} value={sarza.id}>
@@ -305,53 +201,19 @@ const CreateSarza = () => {
                                 </select>
 
                                 {skartLinkSarza.length > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveSkartLinkSarza(index)}
-                                        style={{
-                                            padding: '5px 10px',
-                                            backgroundColor: '#dc3545',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '5px',
-                                            cursor: 'pointer',
-                                            marginLeft: '10px',
-                                            minWidth: '80px', // Ensure button has minimum width
-                                        }}
-                                    >
-                                        Ukloni
-                                    </button>
+                                    <button type="button" onClick={() => handleRemoveSkartLinkSarza(index)} className="sarza-remove-btn">Ukloni</button>
                                 )}
                             </div>
                         ))}
                         {skartLinkSarza.length < 3 && (
-                            <button
-                                type="button"
-                                onClick={handleAddSkartLinkSarza}
-                                style={{
-                                    padding: '8px 12px',
-                                    backgroundColor: '#007bff',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '5px',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                + Dodaj
-                            </button>
+                            <button type="button" onClick={handleAddSkartLinkSarza} className="sarza-add-bkalat-btn">+ Dodaj</button>
                         )}
                     </div>
 
                     {/* Kada selection */}
-                    <div style={{marginBottom: '15px'}}>
-                        <label style={{display: 'block', marginBottom: '5px', color: '#555'}}>Kada</label>
-                        <select value={kadaId || ''} onChange={handleKadaSelect} required style={{
-                            width: '100%',
-                            padding: '8px',
-                            fontSize: '14px',
-                            border: '1px solid #ccc',
-                            borderRadius: '5px'
-                        }}>
+                    <div className="input-div">
+                        <label className="sarza-labels">Kada</label>
+                        <select value={kadaId || ''} onChange={handleKadaSelect} required className="sarza-dropdown">
                             <option value="">Odaberi Kadu</option>
                             {allKadas.map((kada) => (
                                 <option key={kada.id} value={kada.id}>
@@ -372,23 +234,12 @@ const CreateSarza = () => {
                     {/*)}*/}
 
                     {/* Submit Button */}
-                    <div style={{textAlign: 'center', marginTop: '20px'}}>
-                        <button type="submit" style={{
-                            width: '100%',
-                            padding: '11px 0',
-                            backgroundColor: '#007bff',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '5px',
-                            cursor: 'pointer'
-                        }}>
-                            Submit
-                        </button>
+                    <div className="sarza-submit">
+                        <button type="submit" className="sarza-submit-btn">Submit</button>
                     </div>
                 </form>
 
-                {/* Message */}
-                {message && <div style={{textAlign: 'center', marginTop: '20px', color: '#333'}}>{message}</div>}
+                {/*{message && <div style={{textAlign: 'center', marginTop: '20px', color: '#333'}}>{message}</div>}*/}
             </div>
         </div>
     );
