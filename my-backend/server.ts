@@ -456,14 +456,12 @@ app.post('/api/nalogs', async (req, res) => {
 app.post('/api/sarzas', async (req, res) => {
     const { nalog_id, broj_komada_alat, skart, kada_id } = req.body;
 
-    // Calculate total_br_kmd
+    // Calculate total_br_kmd and total_skart
     const total_br_kmd = broj_komada_alat.reduce((acc: number, item: any) => acc + parseInt(item.broj_komada), 0);
-
-    // Calculate total_skart (if skart array is provided)
     const total_skart = skart.length ? skart.reduce((acc: number, item: any) => acc + parseInt(item.skart), 0) : 0;
 
     try {
-        // Serialize the skart array to store it in the database
+        // Serialize the skart array
         const serialized_skart = skart.length ? JSON.stringify(skart) : null;
 
         // Insert into the sarzas table
@@ -471,24 +469,38 @@ app.post('/api/sarzas', async (req, res) => {
             INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, total_skart, kada_id, created_at, completed)
             VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
         `;
-
-        // Execute the query
         const [result] = await db.execute(query, [
             nalog_id,
-            JSON.stringify(broj_komada_alat),  // Serialize the array of objects
+            JSON.stringify(broj_komada_alat),
             total_br_kmd,
-            serialized_skart,  // Store the JSON string of skart
+            serialized_skart,
             total_skart,
             kada_id,
         ]);
 
-        // Send response with inserted ID
-        res.json({ message: 'Sarza created successfully', id: (result as any).insertId });
+        // Insert into the skart table for each skart entry
+        const sarzaId = (result as any).insertId;
+        for (const skartItem of skart) {
+            const skartQuery = `
+                INSERT INTO skart (sarza_id, skart, alat, linked_sarza)
+                VALUES (?, ?, ?, ?)
+            `;
+            await db.execute(skartQuery, [
+                sarzaId,
+                skartItem.skart,
+                skartItem.alat,
+                skartItem.linkedSarza || null,
+            ]);
+        }
+
+        // Return the result
+        res.json({ message: 'Sarza and Skart entries created successfully', id: sarzaId });
     } catch (error) {
-        console.error('Error creating Sarza:', error);
-        res.status(500).json({ message: 'Failed to create Sarza', error: (error as Error).message });
+        console.error('Error creating Sarza and Skart:', error);
+        res.status(500).json({ message: 'Failed to create Sarza and Skart', error: (error as Error).message });
     }
 });
+
 
 
 // GET /api/sarzas

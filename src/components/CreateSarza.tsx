@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const CreateSarza = () => {
     const [nalogs, setNalog] = useState<any[]>([]); // List of nalogs to populate the dropdown
@@ -7,7 +7,6 @@ const CreateSarza = () => {
     const [skartLinkSarza, setSkartLinkSarza] = useState<any[]>([{ skart: '', linkedSarza: '', alat: '' }]); // Start with one default field
     const [kadaId, setKadaId] = useState<number | null>(null); // Dropdown for kada_id
     const [nalogId, setNalogId] = useState<string>(''); // Selected nalog_id (broj_naloga)
-    // const [message] = useState<string>(''); // Message for success or error
     const [allKadas, setAllKadas] = useState<any[]>([]); // List of kadas to populate the kada dropdown
     // @ts-ignore
     const [selectedKada, setSelectedKada] = useState<any>(null); // Selected kada for temperature display
@@ -66,7 +65,7 @@ const CreateSarza = () => {
             skart: skartLinkSarza.map(item => ({
                 skart: item.skart,
                 alat: item.alat,
-                sarza: item.linkedSarza,
+                linkedSarza: item.linkedSarza || null,
             })),
             kada_id: kadaId
         };
@@ -81,8 +80,13 @@ const CreateSarza = () => {
             });
 
             const result = await response.json();
-            alert(`Šarža uspješno kreirana, ID: ${result.id}`);
-            resetForm();
+
+            if (response.ok) {
+                alert(`Šarža uspješno kreirana, ID: ${result.id}`);
+                resetForm();
+            } else {
+                alert(`Greška: ${result.message}`);
+            }
         } catch (error) {
             alert('Greška u izradi šarže');
             console.error(error);
@@ -140,7 +144,6 @@ const CreateSarza = () => {
         setSelectedKada(null);
         setLinkedSarzas([]);
     };
-
     return (
         <div className="createsarza">
             <div className="sarza-div">
