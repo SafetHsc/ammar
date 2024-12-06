@@ -235,7 +235,7 @@ const CreateSarza = () => {
 
                     {/* Submit Button */}
                     <div className="sarza-submit">
-                        <button type="submit" className="sarza-submit-btn">Submit</button>
+                        <button type="submit" className="sarza-submit-btn">Kreiraj Šaržu</button>
                     </div>
                 </form>
 

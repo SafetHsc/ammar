@@ -573,9 +573,61 @@ app.get('/api/nalogs', async (_req, res) => {
     }
 });
 
+app.get('/api/sarzas/view', async (_req, res) => {
+    try {
+        const query = `
+            SELECT 
+                id, 
+                nalog_id, 
+                broj_komada_alat, 
+                total_br_kmd, 
+                skart, 
+                total_skart, 
+                kada_id, 
+                completed, 
+                created_at, 
+                completed_at 
+            FROM sarzas
+        `;
 
+        // Execute the query
+        const [rows] = await db.execute(query);
 
+        // Send the rows as JSON response
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching all sarzas:', error);
+        res.status(500).json({ message: 'Error fetching all sarzas' });
+    }
+});
 
+// @ts-ignore
+app.put('/api/sarzas/:id/complete', async (req, res) => {
+    const { id } = req.params;  // Get the sarza ID from the route parameter
+console.log(req.body);
+    try {
+        // Update query
+        const query = `
+            UPDATE sarzas
+            SET completed = 1
+            WHERE id = ?
+        `;
+
+        // Execute the query and properly type the result
+        const [result]: [ResultSetHeader, FieldPacket[]] = await db.execute(query, [id]);
+
+        // Check the `affectedRows` property
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Sarza not found' });
+        }
+
+        // Respond with success
+        res.json({ message: 'Sarza completed successfully' });
+    } catch (error) {
+        console.error('Error updating sarza:', error);
+        res.status(500).json({ message: 'Error updating sarza' });
+    }
+});
 
 // Start the server
 app.listen(port, () => {

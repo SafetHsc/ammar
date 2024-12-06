@@ -603,37 +603,6 @@ button:hover {
   background-color: #0056b3;
 }
 
-/* Center the buttons on the screen */
-.centered-buttons {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* Create 2 equal columns */
-  grid-template-rows: repeat(2, auto); /* Create 2 equal rows */
-  gap: 1px; /* Adjust the space between buttons */
-  justify-items: center; /* Center the buttons horizontally in each cell */
-  align-items: center; /* Center the buttons vertically in each cell */
-  height: 100vh; /* Full screen height */
-  width: 100%; /* Full screen width */
-  background-color: #f4f4f4;
-}
-
-/* Styling for individual buttons */
-.ns-btn {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 15px 30px; /* Larger padding to make buttons more prominent */
-  font-size: 1.2rem; /* Larger font size */
-  border-radius: 8px;
-  cursor: pointer;
-  width: 100%; /* Make buttons take full width of their container */
-  transition: background-color 0.3s ease;
-}
-
-/* Hover effect */
-.ns-btn:hover {
-  background-color: #0056b3;
-}
-
 .createsarza {
   display: flex;
   justify-content: center;
@@ -923,6 +892,4 @@ button:hover {
     padding: 8px;
   }
 }
-
-
 
