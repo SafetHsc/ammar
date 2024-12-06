@@ -28,7 +28,7 @@ const ViewNalogs: React.FC = () => {
     useEffect(() => {
         const fetchNalogs = async () => {
             try {
-                const response = await fetch('/api/nalogs');
+                const response = await fetch('/api/nalogs/view');
                 if (!response.ok) throw new Error('Failed to fetch nalogs');
                 const data: Nalog[] = await response.json();
                 setNalogs(data);

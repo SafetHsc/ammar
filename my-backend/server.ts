@@ -550,21 +550,50 @@ app.get('/api/nalogs/:id/sarzas', async (req, res) => {
 app.get('/api/nalogs', async (_req, res) => {
     try {
         const query = `
-            SELECT 
-                nalogs.id, 
-                nalogs.broj_naloga, 
-                nalogs.firma, 
-                nalogs.broj_komada_alat, 
-                nalogs.total_broj_komada, 
-                nalogs.opis, 
-                nalogs.completed, 
-                nalogs.created_at, 
+            SELECT
+                nalogs.id,
+                nalogs.broj_naloga,
+                nalogs.firma,
+                nalogs.broj_komada_alat,
+                nalogs.total_broj_komada,
+                nalogs.opis,
+                nalogs.completed,
+                nalogs.created_at,
                 nalogs.completed_at,
                 GROUP_CONCAT(sarzas.id) AS sarze
             FROM nalogs
-            LEFT JOIN sarzas ON nalogs.broj_naloga = sarzas.nalog_id
+                     LEFT JOIN sarzas ON nalogs.broj_naloga = sarzas.nalog_id
+            WHERE nalogs.completed = 0
             GROUP BY nalogs.id
         `;
+
+        const [results] = await db.execute(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching nalogs:', error);
+        res.status(500).json({ message: 'Error fetching nalogs' });
+    }
+});
+
+app.get('/api/nalogs/view', async (_req, res) => {
+    try {
+        const query = `
+            SELECT
+                nalogs.id,
+                nalogs.broj_naloga,
+                nalogs.firma,
+                nalogs.broj_komada_alat,
+                nalogs.total_broj_komada,
+                nalogs.opis,
+                nalogs.completed,
+                nalogs.created_at,
+                nalogs.completed_at,
+                GROUP_CONCAT(sarzas.id) AS sarze
+            FROM nalogs
+                     LEFT JOIN sarzas ON nalogs.broj_naloga = sarzas.nalog_id
+            GROUP BY nalogs.id
+        `;
+
         const [results] = await db.execute(query);
         res.json(results);
     } catch (error) {
@@ -604,7 +633,6 @@ app.get('/api/sarzas/view', async (_req, res) => {
 // @ts-ignore
 app.put('/api/sarzas/:id/complete', async (req, res) => {
     const { id } = req.params;  // Get the sarza ID from the route parameter
-console.log(req.body);
     try {
         // Update query
         const query = `
@@ -628,6 +656,8 @@ console.log(req.body);
         res.status(500).json({ message: 'Error updating sarza' });
     }
 });
+
+
 
 // Start the server
 app.listen(port, () => {
