@@ -29,6 +29,7 @@ const InvalidLink: React.FC = () => {
 
 interface TemperatureData {
     id: number;
+    cardName: string;
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
@@ -121,6 +122,7 @@ const App: React.FC = () => {
                         {temperatureData.length > 0 ? (
                             temperatureData.map(({
                                 id,
+                                cardName,
                                 topTemperature,
                                 currentTemperature,
                                 bottomTemperature,
@@ -129,6 +131,7 @@ const App: React.FC = () => {
                                 <Card
                                     key={id}
                                     id={id}
+                                    cardName={cardName}
                                     topTemperature={topTemperature}
                                     currentTemperature={currentTemperature}
                                     bottomTemperature={bottomTemperature}

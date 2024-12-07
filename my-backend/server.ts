@@ -142,7 +142,7 @@ app.get('/api/arduino-data', (_req, res) => {
 
 // Endpoint to fetch temperature data for cards
 app.get('/api/cards', async (_req, res) => {
-    const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature, elGrijac, ventil FROM cards';
+    const query = 'SELECT id, cardName, topTemperature, currentTemperature, bottomTemperature, elGrijac, ventil FROM cards';
 
     try {
         const [results] = await db.query(query);
@@ -156,7 +156,7 @@ app.get('/api/cards', async (_req, res) => {
 // Endpoint to fetch temperature data for a specific card by ID
 app.get('/api/cards/:id', async (req, res) => {
     const { id } = req.params; // Get the card ID from the request parameters
-    const query = 'SELECT id, topTemperature, currentTemperature, bottomTemperature, elGrijac, ventil FROM cards WHERE id = ?';
+    const query = 'SELECT id, cardName, topTemperature, currentTemperature, bottomTemperature, elGrijac, ventil FROM cards WHERE id = ?';
 
     try {
         const [results]: [RowDataPacket[], any] = await db.query(query, [id]);

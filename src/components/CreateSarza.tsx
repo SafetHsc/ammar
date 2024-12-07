@@ -219,9 +219,12 @@ const CreateSarza = () => {
                         <select value={kadaId || ''} onChange={handleKadaSelect} required className="sarza-dropdown">
                             <option value="">Odaberi Kadu</option>
                             {allKadas.map((kada) => (
-                                <option key={kada.id} value={kada.id}>
-                                    Kada {kada.id}
+                                      /* key={kada.id}        value={kada.id} */
+                                               /* KADA {kada.id}  */
+                                <option key={kada.cardName} value={kada.cardName}>
+                                    {kada.cardName}
                                 </option>
+
                             ))}
                         </select>
                     </div>

@@ -3,6 +3,7 @@ import {Link, useParams} from "react-router-dom";
 
 interface TemperatureData {
     id: number;
+    cardName: string;
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
@@ -100,11 +101,11 @@ const CardDetail: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn }) => {
         return <p>No data found.</p>;
     }
 
-    const cardName = id === '10' ? 'BAJC' : `KADA ${id}`;
+
 
     return (
         <div className="kont-temp-div">
-            <h2 className="h2-kont-temp">{cardName} - Kontrola Temperatura</h2>
+            <h2 className="h2-kont-temp">{cardData.cardName} - Kontrola Temperatura</h2>
             <div className="kont-temp">
                 <div className="kont-temp-left">
                     <div className="card-detail">

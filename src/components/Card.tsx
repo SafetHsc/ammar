@@ -4,6 +4,7 @@ import grijacOff from "../assets/grijacOff.jpg";
 
 interface CardProps {
     id: number;
+    cardName: string;
     topTemperature: number | null;
     currentTemperature: number | null;
     bottomTemperature: number | null;
@@ -11,8 +12,7 @@ interface CardProps {
     isLoggedIn: boolean;
 }
 
-const Card: React.FC<CardProps> = ({ id, topTemperature, currentTemperature, bottomTemperature, elGrijac, isLoggedIn }) => {
-    const cardName = id === 10 ? 'BAJC' : `KADA ${id}`;
+const Card: React.FC<CardProps> = ({ id, cardName, topTemperature, currentTemperature, bottomTemperature, elGrijac, isLoggedIn }) => {
 
     const handleClick = () => {
         if (isLoggedIn) {
