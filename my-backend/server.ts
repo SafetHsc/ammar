@@ -1,11 +1,14 @@
 import express from 'express';
+import dotenv from 'dotenv';
 import mysql, {ResultSetHeader, RowDataPacket, FieldPacket} from 'mysql2/promise';
 import cors from 'cors';
 import {ReadlineParser, SerialPort} from 'serialport';
 import cron from 'node-cron';
 
+dotenv.config();
+
 const app = express();
-const port = 5174;
+const port = process.env.PORT;
 
 // Middleware
 app.use(cors());
@@ -13,10 +16,10 @@ app.use(express.json());
 
 // MySQL database connection pool
 const db = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'ammar',
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
 });
 
 // Check database connection

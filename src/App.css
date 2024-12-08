@@ -149,13 +149,10 @@ a:hover {
   color: red; /* Change to your desired color */
 }
 
-.set-temp {
-  color:green;
-}
-
 .current-temp {
   color: #fcca03; /* Change to your desired color */
 }
+
 .current-temp-broj {
   font-size: 35px;
   margin-top: 8px;

@@ -168,6 +168,7 @@ const App: React.FC = () => {
                     <Link to="/" >Nazad</Link>
                 </div>
             } />
+
             <Route path="/logovi" element={
                 isLoggedIn && role === 1 ? (
                     <div className="admin-log">
@@ -180,6 +181,7 @@ const App: React.FC = () => {
                     <InvalidLink />
                 )
             } />
+
             <Route path="/notifications" element={
                 isLoggedIn ? (
                     <div>
@@ -190,6 +192,7 @@ const App: React.FC = () => {
                     <InvalidLink />
                 )
             } />
+
             <Route path="/nalozi-sarze" element={isLoggedIn ? <NaloziSarze /> : <InvalidLink />} />
             <Route path="/novi-nalog" element={isLoggedIn ? <CreateNalog /> : <InvalidLink />} />
             <Route path="/nova-sarza" element={isLoggedIn ? <CreateSarza /> : <InvalidLink />} />
