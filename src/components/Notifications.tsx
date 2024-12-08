@@ -27,7 +27,7 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
 
             if (response.ok) {
                 alert('Notification marked as done');
-                fetchNotifications(); // Refresh the list after marking as done
+                await fetchNotifications(); // Refresh the list after marking as done
             } else {
                 const errorData = await response.json();
                 alert(errorData.error || 'Failed to mark notification as done');
@@ -49,7 +49,7 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
 
             if (response.ok) {
                 alert('Notification dismissed');
-                fetchNotifications(); // Refresh the list after dismissing
+                await fetchNotifications(); // Refresh the list after dismissing
             } else {
                 const errorData = await response.json();
                 alert(errorData.error || 'Failed to dismiss notification');

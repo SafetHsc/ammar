@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 interface NalogFormData {
     broj_naloga: string;
     firma: string;
-    broj_komada_alat: { alat: string; broj_komada: string }[];  // Change to string instead of number
+    broj_komada_alat: { alat: string; broj_komada: string }[];
     total_broj_komada: number;
     opis?: string;
     completed: boolean;
@@ -25,7 +25,6 @@ const CreateNalog: React.FC = () => {
         const updatedData = [...formData.broj_komada_alat];
         updatedData[index] = { ...updatedData[index], [name]: value };
 
-        // Recalculate total_broj_komada based on the sum of broj_komada (convert to number only if it's a valid number)
         const total_broj_komada = updatedData.reduce((sum, item) => {
             const brojKomada = item.broj_komada ? Number(item.broj_komada) : 0;
             return sum + brojKomada;
@@ -35,12 +34,10 @@ const CreateNalog: React.FC = () => {
     };
 
     const handleAddInput = () => {
-        if (formData.broj_komada_alat.length < 3) {
-            setFormData({
-                ...formData,
-                broj_komada_alat: [...formData.broj_komada_alat, { alat: '', broj_komada: '' }],
-            });
-        }
+        setFormData({
+            ...formData,
+            broj_komada_alat: [...formData.broj_komada_alat, { alat: '', broj_komada: '' }],
+        });
     };
 
     const handleRemoveInput = (index: number) => {
@@ -55,6 +52,16 @@ const CreateNalog: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validation: Check if any `broj_komada` > 0 but `alat` is empty
+        const invalidRow = formData.broj_komada_alat.find(
+            (item) => Number(item.broj_komada) > 0 && item.alat.trim() === ''
+        );
+
+        if (invalidRow) {
+            alert('Molimo unesite alat za sve redove.');
+            return; // Prevent form submission
+        }
+
         try {
             const response = await fetch('/api/nalogs', {
                 method: 'POST',
@@ -64,8 +71,10 @@ const CreateNalog: React.FC = () => {
                 body: JSON.stringify(formData),
             });
 
+            const result = await response.json();
+
             if (response.ok) {
-                alert('Nalog uspješno kreiran!');
+                alert(`Nalog uspješno kreiran, ID: ${result.id}`);
                 setFormData({
                     broj_naloga: '',
                     firma: '',
@@ -81,6 +90,7 @@ const CreateNalog: React.FC = () => {
             alert('Greška u izradi naloga.');
         }
     };
+
 
     return (
         <div className="createnalog">
@@ -113,39 +123,39 @@ const CreateNalog: React.FC = () => {
                     </div>
                     <div className="broj-naloga">
                         <label className="nalog-label">Broj Komada + Alat:</label>
-                        {formData.broj_komada_alat.map((input, index) => (
-                            <div key={index} className="nalog-brkmd-alat">
-                                <input
-                                    type="number"
-                                    name="broj_komada"
-                                    value={input.broj_komada}
-                                    onChange={(e) => handleInputChange(e, index)}
-                                    placeholder="Broj Komada"
-                                    min={0}
-                                    max={1000}
-                                    required
-                                    className="input-brkmd-nalog"
-                                />
-                                <input
-                                    type="text"
-                                    name="alat"
-                                    value={input.alat}
-                                    onChange={(e) => handleInputChange(e, index)}
-                                    placeholder="Alat"
-                                    required
-                                    className="nalog-alat"
-                                />
-                                {formData.broj_komada_alat.length > 1 && (
-                                    <button type="button" onClick={() => handleRemoveInput(index)} className="nalog-ukloni-btn">Ukloni</button>
-                                )}
-                            </div>
-                        ))}
+                        <div className="scrollable-container">
+                            {formData.broj_komada_alat.map((input, index) => (
+                                <div key={index} className="nalog-brkmd-alat">
+                                    <input
+                                        type="number"
+                                        name="broj_komada"
+                                        value={input.broj_komada}
+                                        onChange={(e) => handleInputChange(e, index)}
+                                        placeholder="Broj Komada"
+                                        min={1}
+                                        max={10001}
+                                        required
+                                        className="input-brkmd-nalog"
+                                    />
+                                    <input
+                                        type="text"
+                                        name="alat"
+                                        value={input.alat}
+                                        onChange={(e) => handleInputChange(e, index)}
+                                        placeholder="Alat"
+                                        required
+                                        className="nalog-alat"
+                                    />
+                                    {formData.broj_komada_alat.length > 1 && (
+                                        <button type="button" onClick={() => handleRemoveInput(index)} className="nalog-ukloni-btn">Ukloni</button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                         <button
                             type="button"
                             onClick={handleAddInput}
                             className="nalog-dodaj-input"
-                            style={{ cursor: formData.broj_komada_alat.length >= 3 ? 'not-allowed' : 'pointer' }}
-                            disabled={formData.broj_komada_alat.length >= 3}
                         >
                             + Dodaj
                         </button>

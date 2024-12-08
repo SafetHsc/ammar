@@ -20,6 +20,7 @@ const ViewSarza: React.FC = () => {
     const [error, setError] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [nalogSearch, setNalogSearch] = useState<string>('');
+    const [sarzaIdSearch, setSarzaIdSearch] = useState<string>(''); // New state
     const [completedFilter, setCompletedFilter] = useState<string>('all');
 
     const itemsPerPage = 10;
@@ -49,11 +50,14 @@ const ViewSarza: React.FC = () => {
         const matchesNalog = sarza.nalog_id
             .toString()
             .includes(nalogSearch.trim());
+        const matchesSarzaId = sarza.id
+            .toString()
+            .includes(sarzaIdSearch.trim()); // New filter condition
         const matchesCompleted =
             completedFilter === 'all' ||
             sarza.completed.toString() === completedFilter;
 
-        return matchesNalog && matchesCompleted;
+        return matchesNalog && matchesSarzaId && matchesCompleted;
     });
 
     // Pagination logic
@@ -91,7 +95,19 @@ const ViewSarza: React.FC = () => {
             </div>
 
             {/* Search and Filter Controls */}
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '20px' }}>
+            <div style={{marginBottom: '20px', display: 'flex', gap: '2px'}}>
+                <input
+                    type="text"
+                    placeholder="Pretraži ID"
+                    value={sarzaIdSearch}
+                    onChange={(e) => setSarzaIdSearch(e.target.value)} // New search bar
+                    style={{
+                        padding: '10px',
+                        borderRadius: '4px',
+                        border: '1px solid #ddd',
+                        width: '200px',
+                    }}
+                />
                 <input
                     type="text"
                     placeholder="Pretraži Po Nalogu"
@@ -104,6 +120,7 @@ const ViewSarza: React.FC = () => {
                         width: '200px',
                     }}
                 />
+
                 <select
                     value={completedFilter}
                     onChange={(e) => setCompletedFilter(e.target.value)}
@@ -120,7 +137,7 @@ const ViewSarza: React.FC = () => {
                 </select>
             </div>
 
-            <div style={{ maxHeight: 'calc(70vh - 50px)', overflowY: 'auto', paddingBottom: '40px' }}>
+            <div style={{maxHeight: 'calc(70vh - 50px)', overflowY: 'auto', paddingBottom: '40px'}}>
                 <table className="nalogs-table">
                     <thead>
                     <tr>

@@ -8,6 +8,7 @@ html, body {
   height: 100%; /* Ensure full height */
   overflow: hidden; /* Prevent scrolling */
   background-color: white; /* Background color */
+  overflow-y: auto;
 }
 
 /* Header styles */
@@ -727,8 +728,11 @@ button:hover {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
   background-color: #f4f4f4;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .nalog-div {

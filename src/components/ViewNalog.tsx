@@ -20,6 +20,7 @@ const ViewNalogs: React.FC = () => {
     const [error, setError] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [filter, setFilter] = useState<string>('all');
+    const [idSearch, setIdSearch] = useState<string>(''); // New state for ID search
     const [brojNalogSearch, setBrojNalogSearch] = useState<string>('');
     const [firmaSearch, setFirmaSearch] = useState<string>('');
 
@@ -48,9 +49,10 @@ const ViewNalogs: React.FC = () => {
     // Filter logic
     const filteredNalogs = nalogs.filter((nalog) => {
         const matchesFilter = filter === 'all' || nalog.completed.toString() === filter;
+        const matchesId = nalog.id.toString().includes(idSearch.trim());
         const matchesBrojNalog = nalog.broj_naloga.toLowerCase().includes(brojNalogSearch.toLowerCase());
         const matchesFirma = nalog.firma.toLowerCase().includes(firmaSearch.toLowerCase());
-        return matchesFilter && matchesBrojNalog && matchesFirma;
+        return matchesFilter && matchesId && matchesBrojNalog && matchesFirma;
     });
 
     // Pagination logic
@@ -97,6 +99,21 @@ const ViewNalogs: React.FC = () => {
                     <div>
                         <input
                             type="text"
+                            placeholder="Pretraži ID"
+                            value={idSearch}
+                            onChange={(e) => setIdSearch(e.target.value)}
+                            style={{
+                                padding: '10px',
+                                borderRadius: '4px',
+                                border: '1px solid #ddd',
+                                backgroundColor: '#fff',
+                                width: '100%',
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <input
+                            type="text"
                             placeholder="Pretraži Broj Naloga"
                             value={brojNalogSearch}
                             onChange={(e) => setBrojNalogSearch(e.target.value)}
@@ -109,7 +126,6 @@ const ViewNalogs: React.FC = () => {
                             }}
                         />
                     </div>
-
                     <div>
                         <input
                             type="text"
@@ -151,6 +167,7 @@ const ViewNalogs: React.FC = () => {
                 <table className="nalogs-table">
                     <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Broj Naloga</th>
                         <th>Firma</th>
                         <th>Broj Komada + Alat</th>
@@ -165,6 +182,7 @@ const ViewNalogs: React.FC = () => {
                     <tbody>
                     {currentNalogs.map((nalog) => (
                         <tr key={nalog.id}>
+                            <td>{nalog.id}</td>
                             <td>{nalog.broj_naloga}</td>
                             <td>{nalog.firma}</td>
                             <td>

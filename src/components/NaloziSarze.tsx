@@ -12,13 +12,13 @@ const NaloziSarze = () => {
                     <button style={styles.button}>KREIRAJ NALOG</button>
                 </Link>
                 <Link to="/nova-sarza">
-                    <button style={styles.button}>KREIRAJ SARZU</button>
+                    <button style={styles.button}>KREIRAJ ŠARŽU</button>
                 </Link>
                 <Link to="/vidi-nalog">
                     <button style={styles.button}>PREGLED NALOGA</button>
                 </Link>
                 <Link to="/vidi-sarze">
-                    <button style={styles.button}>PREGLED SARZI</button>
+                    <button style={styles.button}>PREGLED ŠARŽI</button>
                 </Link>
                 {/* New buttons */}
                 <Link to="/kompletiraj-nalog">

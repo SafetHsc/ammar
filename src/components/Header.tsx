@@ -44,16 +44,16 @@ const Header: React.FC<{ isLoggedIn: boolean; role: number | null; onLogout: () 
             <div className="header-right">
                 {isLoggedIn ? (
                     <>
-                        {/*<Link to="/notifications">*/}
-                        {/*    <button className="notifications-btn">*/}
-                        {/*        OBAVIJESTI {notificationsCount > 0 && <span>({notificationsCount})</span>}*/}
-                        {/*    </button>*/}
-                        {/*</Link>*/}
-                        {/*<Link to="/nalozi-sarze">*/}
-                        {/*    <button className="login-btn">*/}
-                        {/*        NALOZI I SARZE*/}
-                        {/*    </button>*/}
-                        {/*</Link>*/}
+                        <Link to="/notifications">
+                            <button className="notifications-btn">
+                                OBAVIJESTI {notificationsCount > 0 && <span>({notificationsCount})</span>}
+                            </button>
+                        </Link>
+                        <Link to="/nalozi-sarze">
+                            <button className="login-btn">
+                                NALOZI I SARZE
+                            </button>
+                        </Link>
 
                         {role === 1 && (
                             <>
