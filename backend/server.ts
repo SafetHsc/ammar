@@ -429,66 +429,129 @@ app.get('/api/nalogs/incomplete', async (_req, res) => {
 
 app.post('/api/nalogs', async (req, res) => {
     const { broj_naloga, firma, broj_komada_alat, total_broj_komada, opis, completed } = req.body;
+
     try {
+        // Insert into the nalogs table, including both broj_komada_alat and remaining_broj_komada_alat
         const query = `
-            INSERT INTO nalogs (broj_naloga, firma, broj_komada_alat, total_broj_komada, opis, completed, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO nalogs (broj_naloga, firma, broj_komada_alat, total_broj_komada, opis, completed, created_at, remaining_broj_komada_alat)
+            VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
         `;
 
-        // Awaiting db.execute and handling the response correctly
+        // Execute the query, stringifying the broj_komada_alat array for storage
         const result = await db.execute(query, [
             broj_naloga,
             firma,
-            JSON.stringify(broj_komada_alat),
+            JSON.stringify(broj_komada_alat), // Storing in broj_komada_alat
             total_broj_komada,
             opis,
             completed ? 1 : 0,
+            JSON.stringify(broj_komada_alat) // Storing the same value in remaining_broj_komada_alat
         ]);
 
-        // Accessing insertId correctly
+        // Access the insertId from the query result
         const insertId = (result[0] as ResultSetHeader).insertId;
 
+        // Send the response with the insertId
         res.status(201).json({ message: 'Nalog created successfully', id: insertId });
     } catch (error) {
+        // Handle any errors
         console.error('Error creating nalog:', error);
         res.status(500).json({ message: 'Error creating nalog' });
     }
 });
 
+type BrojKomadaAlat = { broj_komada: string; alat: string };
+type SkartItem = { skart: string; alat: string; linkedSarza?: number };
+type QueryResultWithInsertId = { insertId: number; affectedRows: number };
+type Nalog = { remaining_broj_komada_alat: string };
+
 // POST /api/sarzas
 app.post('/api/sarzas', async (req, res) => {
-    const { nalog_id, broj_komada_alat, skart, kada_id } = req.body;
+    const { nalog_id, broj_komada_alat, skart, kada_id }: {
+        nalog_id: string;
+        broj_komada_alat: BrojKomadaAlat[];
+        skart: SkartItem[];
+        kada_id: number;
+    } = req.body;
 
-    // Calculate total_br_kmd and total_skart
-    const total_br_kmd = broj_komada_alat.reduce((acc: number, item: any) => acc + parseInt(item.broj_komada), 0);
-    const total_skart = skart.length ? skart.reduce((acc: number, item: any) => acc + parseInt(item.skart), 0) : 0;
+    // Initialize total_br_kmd and total_skart correctly
+    const total_br_kmd = broj_komada_alat.reduce((acc: number, item: BrojKomadaAlat) => acc + parseInt(item.broj_komada, 10), 0);
+    const total_skart = skart.length ? skart.reduce((acc: number, item: SkartItem) => acc + parseInt(item.skart, 10), 0) : 0;
 
+    const connection = await db.getConnection();
     try {
-        // Serialize the skart array
+        // Start the transaction
+        await connection.beginTransaction();
+
+        // Fetch remaining pieces from nalogs
+        const [nalogRows] = await connection.query(
+            'SELECT remaining_broj_komada_alat FROM nalogs WHERE broj_naloga = ?',
+            [nalog_id]
+        ) as [Nalog[], any];
+
+        if (!nalogRows.length) {
+            throw new Error('Nalog not found');
+        }
+
+        const nalog = nalogRows[0];
+        let remaining = JSON.parse(nalog.remaining_broj_komada_alat) as Array<{ alat: string; broj_komada: number }>;
+
+        // Add skart from previous sarza into remaining pieces (if any)
+        for (const { skart: skartCount, alat } of skart) {
+            const alatIndex = remaining.findIndex((item) => item.alat === alat);
+            if (alatIndex >= 0) {
+                remaining[alatIndex].broj_komada += parseInt(skartCount, 10); // Add back skart
+            } else {
+                remaining.push({ alat, broj_komada: parseInt(skartCount, 10) }); // Add new alat if not found
+            }
+        }
+
+        // Check if the total requested broj_komada (including skart) exceeds remaining pieces
+        let exceedsLimit = false;
+
+        // Deduct requested broj_komada_alat from the remaining pieces
+        for (const { broj_komada, alat } of broj_komada_alat) {
+            const alatIndex = remaining.findIndex((item) => item.alat === alat);
+            if (alatIndex >= 0) {
+                const remainingCount = remaining[alatIndex].broj_komada;
+                if (parseInt(broj_komada, 10) > remainingCount) {
+                    exceedsLimit = true;
+                    break;
+                }
+                remaining[alatIndex].broj_komada -= parseInt(broj_komada, 10); // Deduct the requested pieces
+            }
+        }
+
+        // If exceeds, block the creation and return an error
+        if (exceedsLimit) {
+            throw new Error('Requested number of pieces exceeds available remaining pieces');
+        }
+
+        // Proceed with creating Sarza and Skart entries
         const serialized_skart = skart.length ? JSON.stringify(skart) : null;
 
-        // Insert into the sarzas table
         const query = `
             INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, total_skart, kada_id, created_at, completed)
             VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
         `;
-        const [result] = await db.execute(query, [
+        const [result] = await connection.execute(query, [
             nalog_id,
             JSON.stringify(broj_komada_alat),
             total_br_kmd,
             serialized_skart,
             total_skart,
             kada_id,
-        ]);
+        ]) as [QueryResultWithInsertId, any];
 
-        // Insert into the skart table for each skart entry
-        const sarzaId = (result as any).insertId;
+        const sarzaId = result.insertId;
+
+        // Insert skart items into the skart table
         for (const skartItem of skart) {
             const skartQuery = `
                 INSERT INTO skart (sarza_id, skart, alat, linked_sarza)
                 VALUES (?, ?, ?, ?)
             `;
-            await db.execute(skartQuery, [
+            await connection.execute(skartQuery, [
                 sarzaId,
                 skartItem.skart,
                 skartItem.alat,
@@ -496,13 +559,27 @@ app.post('/api/sarzas', async (req, res) => {
             ]);
         }
 
-        // Return the result
+        // Update remaining pieces in nalogs table
+        await connection.query(
+            'UPDATE nalogs SET remaining_broj_komada_alat = ? WHERE broj_naloga = ?',
+            [JSON.stringify(remaining), nalog_id]
+        );
+
+        // Commit the transaction
+        await connection.commit();
+
         res.json({ message: 'Sarza and Skart entries created successfully', id: sarzaId });
     } catch (error) {
-        console.error('Error creating Sarza and Skart:', error);
-        res.status(500).json({ message: 'Failed to create Sarza and Skart', error: (error as Error).message });
+        // Rollback the transaction in case of error
+        await connection.rollback();
+        console.error('Error creating Sarza and updating Nalogs:', error);
+        res.status(500).json({ message: 'Failed to create Sarza and update Nalogs', error: (error as Error).message });
+    } finally {
+        // Release the connection back to the pool
+        connection.release();
     }
 });
+
 
 
 
