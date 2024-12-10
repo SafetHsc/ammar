@@ -163,9 +163,9 @@ const ViewSarza: React.FC = () => {
                                     ? JSON.parse(sarza.broj_komada_alat)
                                         .map(
                                             (item: { alat: string; broj_komada: string }) =>
-                                                `${item.broj_komada}-${item.alat}`
+                                                `${item.broj_komada} - ${item.alat}`
                                         )
-                                        .join(', ')
+                                        .join('; ')
                                     : '-'}
                             </td>
                             <td>{sarza.total_br_kmd}</td>
@@ -175,7 +175,7 @@ const ViewSarza: React.FC = () => {
                                         .map((item: { skart: string; alat: string; linkedSarza: string }) =>
                                             item.skart || item.alat || item.linkedSarza
                                                 ? `${item.skart}-${item.alat}, sarza: ${item.linkedSarza}`
-                                                : 'nema skarta'
+                                                : 'nema škarta'
                                         )
                                         .join('), (')})`
                                     : '-'}

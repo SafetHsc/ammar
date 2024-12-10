@@ -8,6 +8,7 @@ interface Nalog {
     broj_komada_alat: string;
     total_broj_komada: number;
     opis: string;
+    remaining_broj_komada_alat: string;
     completed: number;
     created_at: string;
     completed_at: string | null;
@@ -171,8 +172,9 @@ const ViewNalogs: React.FC = () => {
                         <th>Broj Naloga</th>
                         <th>Firma</th>
                         <th>Broj Komada + Alat</th>
-                        <th>Ukupan Broj Komada</th>
+                        <th>Ukupnih Komada</th>
                         <th>Opis</th>
+                        <th>Neobrađeni Alati</th>
                         <th>Kompletirani</th>
                         <th>Kreirani</th>
                         <th>Završeni</th>
@@ -192,12 +194,22 @@ const ViewNalogs: React.FC = () => {
                                             (item: { alat: string; broj_komada: string }) =>
                                                 `${item.broj_komada} - ${item.alat}`
                                         )
-                                        .join(', ')
+                                        .join('; ')
                                     : '-'}
                             </td>
                             <td>{nalog.total_broj_komada}</td>
                             <td style={{wordWrap: 'break-word', maxWidth: '200px'}}>
                                 {nalog.opis || '-'}
+                            </td>
+                            <td>
+                                {nalog.remaining_broj_komada_alat
+                                    ? JSON.parse(nalog.remaining_broj_komada_alat)
+                                        .map(
+                                            (item: { alat: string; broj_komada: string }) =>
+                                                `${item.broj_komada} - ${item.alat}`
+                                        )
+                                        .join(', ')
+                                    : '-'}
                             </td>
                             <td>{nalog.completed === 1 ? 'Da' : 'Ne'}</td>
                             <td>{formatDateTo24Hour(nalog.created_at)}</td>
@@ -210,11 +222,11 @@ const ViewNalogs: React.FC = () => {
             </div>
 
             {/* Pagination Controls */}
-            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{marginTop: '10px', display: 'flex', justifyContent: 'center'}}>
                 <button
                     onClick={handlePreviousPage}
                     disabled={currentPage === 1}
-                    style={{ marginRight: '10px', padding: '5px 10px' }}
+                    style={{marginRight: '10px', padding: '5px 10px'}}
                 >
                     Prethodna
                 </button>

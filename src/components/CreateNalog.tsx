@@ -108,6 +108,7 @@ const CreateNalog: React.FC = () => {
                             value={formData.broj_naloga}
                             onChange={(e) => setFormData({ ...formData, broj_naloga: e.target.value })}
                             required
+                            placeholder={"Eksterni broj naloga"}
                             className="broj-naloga-input"
                         />
                     </div>

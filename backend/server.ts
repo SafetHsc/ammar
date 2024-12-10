@@ -712,6 +712,7 @@ app.get('/api/nalogs/view', async (_req, res) => {
                 nalogs.firma,
                 nalogs.broj_komada_alat,
                 nalogs.total_broj_komada,
+                nalogs.remaining_broj_komada_alat,
                 nalogs.opis,
                 nalogs.completed,
                 nalogs.created_at,
@@ -763,11 +764,7 @@ app.put('/api/sarzas/:id/complete', async (req, res) => {
     const { id } = req.params;  // Get the sarza ID from the route parameter
     try {
         // Update query
-        const query = `
-            UPDATE sarzas
-            SET completed = 1
-            WHERE id = ?
-        `;
+        const query = `UPDATE sarzas SET completed = 1, completed_at = NOW() WHERE id = ?`;
 
         // Execute the query and properly type the result
         const [result]: [ResultSetHeader, FieldPacket[]] = await db.execute(query, [id]);

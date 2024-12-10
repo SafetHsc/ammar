@@ -189,7 +189,7 @@ const CreateSarza = () => {
                             <div key={index} className="sarza-bk-alat-div">
                                 <input type="number" value={item.broj_komada}
                                        onChange={(e) => handleChangeBrojKomadaAlat(index, 'broj_komada', e.target.value)}
-                                       placeholder="Broj Komada" required className="sarza-bk"/>
+                                       placeholder="Broj Komada" required min={1} max={100001} className="sarza-bk"/>
                                 <select value={item.alat}
                                         onChange={(e) => handleChangeBrojKomadaAlat(index, 'alat', e.target.value)}
                                         required className="sarza-alat-dropdown">
@@ -218,10 +218,12 @@ const CreateSarza = () => {
                             <div key={index} className="sarza-bk-alat-div">
                                 <input type="number" value={item.skart}
                                        onChange={(e) => handleChangeSkartLinkSarza(index, 'skart', e.target.value)}
-                                       placeholder="Skart" className="sarza-bk"/>
-                                <select value={item.alat}
-                                        onChange={(e) => handleChangeBrojKomadaAlat(index, 'alat', e.target.value)}
-                                        className="sarza-alat-dropdown">
+                                       placeholder="Skart" min={1} max={5000} className="sarza-bk"/>
+                                <select
+                                    value={item.alat}
+                                    onChange={(e) => handleChangeSkartLinkSarza(index, 'alat', e.target.value)} // Correct handler
+                                    className="sarza-alat-dropdown"
+                                >
                                     <option value="">Odaberi Alat</option>
                                     {availableAlats.map((alat, i) => (
                                         <option key={i} value={alat}>
