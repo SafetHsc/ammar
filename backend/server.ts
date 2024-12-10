@@ -496,13 +496,17 @@ app.post('/api/sarzas', async (req, res) => {
         const nalog = nalogRows[0];
         let remaining = JSON.parse(nalog.remaining_broj_komada_alat) as Array<{ alat: string; broj_komada: number }>;
 
+
         // Add skart from previous sarza into remaining pieces (if any)
         for (const { skart: skartCount, alat } of skart) {
-            const alatIndex = remaining.findIndex((item) => item.alat === alat);
-            if (alatIndex >= 0) {
-                remaining[alatIndex].broj_komada += parseInt(skartCount, 10); // Add back skart
-            } else {
-                remaining.push({ alat, broj_komada: parseInt(skartCount, 10) }); // Add new alat if not found
+            // Ensure skart and alat are valid before adding
+            if (alat && !isNaN(parseInt(skartCount, 10))) {
+                const alatIndex = remaining.findIndex((item) => item.alat === alat);
+                if (alatIndex >= 0) {
+                    remaining[alatIndex].broj_komada += parseInt(skartCount, 10); // Add back skart
+                } else {
+                    remaining.push({ alat, broj_komada: parseInt(skartCount, 10) }); // Add new alat if not found
+                }
             }
         }
 
@@ -573,15 +577,12 @@ app.post('/api/sarzas', async (req, res) => {
         // Rollback the transaction in case of error
         await connection.rollback();
         console.error('Error creating Sarza and updating Nalogs:', error);
-        res.status(500).json({ message: 'Failed to create Sarza and update Nalogs', error: (error as Error).message });
+        res.status(500).json({ message: 'Preostali dijelovi komada i alati se ne podudaraju', error: (error as Error).message });
     } finally {
         // Release the connection back to the pool
         connection.release();
     }
 });
-
-
-
 
 // GET /api/sarzas
 app.get('/api/sarzas', async (_req, res) => {
