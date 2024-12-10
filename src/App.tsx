@@ -193,7 +193,7 @@ const App: React.FC = () => {
                 )
             } />
 
-            <Route path="/nalozi-sarze" element={isLoggedIn ? <NaloziSarze /> : <InvalidLink />} />
+            <Route path="/nalozi-sarze" element={isLoggedIn ? <NaloziSarze /> : <InvalidLink/>} />
             <Route path="/novi-nalog" element={isLoggedIn ? <CreateNalog /> : <InvalidLink />} />
             <Route path="/nova-sarza" element={isLoggedIn ? <CreateSarza /> : <InvalidLink />} />
             <Route path="/vidi-nalog" element={isLoggedIn ? <ViewNalog /> : <InvalidLink />} />
@@ -210,6 +210,7 @@ const App: React.FC = () => {
                     <Signali />
                 </div>
             } />
+
             <Route path="*" element={<InvalidLink />} />
         </Routes>
     );

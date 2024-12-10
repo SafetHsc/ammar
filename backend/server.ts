@@ -427,6 +427,41 @@ app.get('/api/nalogs/incomplete', async (_req, res) => {
     }
 });
 
+// @ts-ignore
+app.get('/api/nalogs/:nalogId/alats', async (req, res) => {
+    const { nalogId } = req.params;
+
+    try {
+        // Fetch the broj_komada_alat column for the specified nalog
+        const [rows]: any = await db.execute('SELECT broj_komada_alat FROM nalogs WHERE broj_naloga = ?', [nalogId]);
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ message: 'Nalog not found' });
+        }
+
+        const brojKomadaAlat = rows[0]?.broj_komada_alat;
+
+        // Parse the JSON and extract only 'alat' values
+        let alatNames: string[] = [];
+        try {
+            const parsedData = JSON.parse(brojKomadaAlat);
+            if (!Array.isArray(parsedData)) {
+                throw new Error('Invalid JSON format');
+            }
+
+            // Map through the JSON array and extract 'alat'
+            alatNames = parsedData.map((item: any) => item.alat).filter(Boolean);
+        } catch (parseError) {
+            return res.status(400).json({ message: 'Invalid JSON in broj_komada_alat' });
+        }
+
+        res.json(alatNames); // Send the extracted 'alat' names as response
+    } catch (error) {
+        console.error('Error fetching alats:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 app.post('/api/nalogs', async (req, res) => {
     const { broj_naloga, firma, broj_komada_alat, total_broj_komada, opis, completed } = req.body;
 

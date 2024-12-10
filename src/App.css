@@ -601,6 +601,13 @@ button:hover {
   background-color: #0056b3;
 }
 
+.nalozisarze {
+  text-align: center;
+  margin: auto;
+  width: auto;
+  background-color: #f4f4f4;
+}
+
 .createsarza {
   display: flex;
   justify-content: center;
@@ -677,6 +684,14 @@ button:hover {
   border: 1px solid #ccc;
   border-radius: 5px;
   min-width: 150px;
+}
+
+.sarza-alat-dropdown {
+  width: 50%;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
 }
 
 .sarza-remove-btn {

@@ -11,6 +11,7 @@ const CreateSarza = () => {
     // @ts-ignore
     const [selectedKada, setSelectedKada] = useState<any>(null); // Selected kada for temperature display
     const [linkedSarzas, setLinkedSarzas] = useState<any[]>([]); // List of linked Sarzas for the selected Nalog
+    const [availableAlats, setAvailableAlats] = useState<string[]>([]); // List of alat names for the selected nalog
 
     useEffect(() => {
         // Fetch all nalogs to populate the dropdown
@@ -33,6 +34,22 @@ const CreateSarza = () => {
                 console.error('Error fetching kadas:', error);
             });
     }, []);
+
+    useEffect(() => {
+        if (nalogId) {
+            // Fetch available alats for the selected nalog
+            fetch(`/api/nalogs/${encodeURIComponent(nalogId)}/alats`)
+                .then((response) => response.json())
+                .then((data) => {
+                    setAvailableAlats(data);
+                })
+                .catch((error) => {
+                    console.error('Error fetching alat names:', error);
+                });
+        } else {
+            setAvailableAlats([]);
+        }
+    }, [nalogId]);
 
     useEffect(() => {
         if (nalogId) {
@@ -171,16 +188,26 @@ const CreateSarza = () => {
                         {brojKomadaAlat.map((item, index) => (
                             <div key={index} className="sarza-bk-alat-div">
                                 <input type="number" value={item.broj_komada}
-                                    onChange={(e) => handleChangeBrojKomadaAlat(index, 'broj_komada', e.target.value)}
-                                    placeholder="Broj Komada" required className="sarza-bk"/>
-                                <input type="text" value={item.alat} onChange={(e) => handleChangeBrojKomadaAlat(index, 'alat', e.target.value)}
-                                    placeholder="Alat" required className="sarza-alat"/>
+                                       onChange={(e) => handleChangeBrojKomadaAlat(index, 'broj_komada', e.target.value)}
+                                       placeholder="Broj Komada" required className="sarza-bk"/>
+                                <select value={item.alat}
+                                        onChange={(e) => handleChangeBrojKomadaAlat(index, 'alat', e.target.value)}
+                                        required className="sarza-alat-dropdown">
+                                    <option value="">Odaberi Alat</option>
+                                    {availableAlats.map((alat, i) => (
+                                        <option key={i} value={alat}>
+                                            {alat}
+                                        </option>
+                                    ))}
+                                </select>
                                 {brojKomadaAlat.length > 1 && (
-                                    <button type="button" onClick={() => handleRemoveBrojKomadaAlat(index)} className="sarza-remove-btn">Ukloni</button>)}
+                                    <button type="button" onClick={() => handleRemoveBrojKomadaAlat(index)}
+                                            className="sarza-remove-btn">Ukloni</button>)}
                             </div>
                         ))}
                         {brojKomadaAlat.length < 3 && (
-                            <button type="button" onClick={handleAddBrojKomadaAlat} className="sarza-add-bkalat-btn">+ Dodaj</button>
+                            <button type="button" onClick={handleAddBrojKomadaAlat} className="sarza-add-bkalat-btn">+
+                                Dodaj</button>
                         )}
                     </div>
 
@@ -189,12 +216,22 @@ const CreateSarza = () => {
                         <label className="sarza-labels">Škart, Alat i iz šarže:</label>
                         {skartLinkSarza.map((item, index) => (
                             <div key={index} className="sarza-bk-alat-div">
-                                <input type="number" value={item.skart} onChange={(e) => handleChangeSkartLinkSarza(index, 'skart', e.target.value)}
-                                    placeholder="Skart" className="sarza-bk"/>
-                                <input type="text" value={item.alat ?? ''} onChange={(e) => handleChangeSkartLinkSarza(index, 'alat', e.target.value)} placeholder="Alat"
-                                    className="sarza-alat"/>
-                                <select value={item.linkedSarza || ''} onChange={(e) => handleChangeSkartLinkSarza(index, 'linkedSarza', e.target.value)}
-                                    className="linked-sarza">
+                                <input type="number" value={item.skart}
+                                       onChange={(e) => handleChangeSkartLinkSarza(index, 'skart', e.target.value)}
+                                       placeholder="Skart" className="sarza-bk"/>
+                                <select value={item.alat}
+                                        onChange={(e) => handleChangeBrojKomadaAlat(index, 'alat', e.target.value)}
+                                        className="sarza-alat-dropdown">
+                                    <option value="">Odaberi Alat</option>
+                                    {availableAlats.map((alat, i) => (
+                                        <option key={i} value={alat}>
+                                            {alat}
+                                        </option>
+                                    ))}
+                                </select>
+                                <select value={item.linkedSarza || ''}
+                                        onChange={(e) => handleChangeSkartLinkSarza(index, 'linkedSarza', e.target.value)}
+                                        className="linked-sarza">
                                     <option value="">Odaberi Šaržu</option>
                                     {linkedSarzas.map((sarza) => (
                                         <option key={sarza.id} value={sarza.id}>
@@ -204,12 +241,14 @@ const CreateSarza = () => {
                                 </select>
 
                                 {skartLinkSarza.length > 1 && (
-                                    <button type="button" onClick={() => handleRemoveSkartLinkSarza(index)} className="sarza-remove-btn">Ukloni</button>
+                                    <button type="button" onClick={() => handleRemoveSkartLinkSarza(index)}
+                                            className="sarza-remove-btn">Ukloni</button>
                                 )}
                             </div>
                         ))}
                         {skartLinkSarza.length < 3 && (
-                            <button type="button" onClick={handleAddSkartLinkSarza} className="sarza-add-bkalat-btn">+ Dodaj</button>
+                            <button type="button" onClick={handleAddSkartLinkSarza} className="sarza-add-bkalat-btn">+
+                                Dodaj</button>
                         )}
                     </div>
 
