@@ -704,23 +704,7 @@ app.get('/api/nalogs/:id/sarzas', async (req, res) => {
 // Fetch nalogs with related sarzas
 app.get('/api/nalogs', async (_req, res) => {
     try {
-        const query = `
-            SELECT
-                nalogs.id,
-                nalogs.broj_naloga,
-                nalogs.firma,
-                nalogs.broj_komada_alat,
-                nalogs.total_broj_komada,
-                nalogs.opis,
-                nalogs.completed,
-                nalogs.created_at,
-                nalogs.completed_at,
-                GROUP_CONCAT(sarzas.id) AS sarze
-            FROM nalogs
-                     LEFT JOIN sarzas ON nalogs.broj_naloga = sarzas.nalog_id
-            WHERE nalogs.completed = 0
-            GROUP BY nalogs.id
-        `;
+        const query = `SELECT * from nalogs`;
 
         const [results] = await db.execute(query);
         res.json(results);
@@ -809,7 +793,28 @@ app.put('/api/sarzas/:id/complete', async (req, res) => {
     }
 });
 
+// @ts-ignore
+app.put('/api/nalogs/:id/complete', async (req, res) => {
+    const { id } = req.params;  // Get the nalog ID from the route parameter
+    try {
+        // Update query to mark the nalog as completed
+        const query = `UPDATE nalogs SET completed = 1, completed_at = NOW() WHERE id = ?`;
 
+        // Execute the query and properly type the result
+        const [result]: [ResultSetHeader, FieldPacket[]] = await db.execute(query, [id]);
+
+        // Check the `affectedRows` property to see if the update was successful
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Nalog not found' });
+        }
+
+        // Respond with success
+        res.json({ message: 'Nalog completed successfully' });
+    } catch (error) {
+        console.error('Error updating nalog:', error);
+        res.status(500).json({ message: 'Error updating nalog' });
+    }
+});
 
 // Start the server
 app.listen(port, () => {

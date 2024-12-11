@@ -48,7 +48,7 @@ const KompletirajSarzu: React.FC = () => {
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentSarzas = sarzas.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(sarzas.length / itemsPerPage);
+    const totalPages = Math.max(Math.ceil(sarzas.length / itemsPerPage), 1);
 
     const handlePreviousPage = () => {
         if (currentPage > 1) setCurrentPage(currentPage - 1);

@@ -174,7 +174,7 @@ const ViewSarza: React.FC = () => {
                                     ? `(${JSON.parse(sarza.skart)
                                         .map((item: { skart: string; alat: string; linkedSarza: string }) =>
                                             item.skart || item.alat || item.linkedSarza
-                                                ? `${item.skart}-${item.alat}, sarza: ${item.linkedSarza}`
+                                                ? `${item.skart}-${item.alat}, šarža: ${item.linkedSarza}`
                                                 : 'nema škarta'
                                         )
                                         .join('), (')})`
