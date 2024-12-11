@@ -171,14 +171,14 @@ const ViewNalogs: React.FC = () => {
                         <th>ID</th>
                         <th>Broj Naloga</th>
                         <th>Firma</th>
-                        <th>Broj Komada + Alat</th>
+                        <th>Zaprimljeni Alati</th>
                         <th>Ukupnih Komada</th>
                         <th>Opis</th>
                         <th>Neobrađeni Alati</th>
-                        <th>Kompletirani</th>
-                        <th>Kreirani</th>
-                        <th>Završeni</th>
-                        <th>Šarže</th>
+                        <th>Kompletirano</th>
+                        <th>Kreiran</th>
+                        <th>Završen</th>
+                        <th>Šarže (ID)</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -208,7 +208,7 @@ const ViewNalogs: React.FC = () => {
                                             (item: { alat: string; broj_komada: string }) =>
                                                 `${item.broj_komada} - ${item.alat}`
                                         )
-                                        .join(', ')
+                                        .join('; ')
                                     : '-'}
                             </td>
                             <td>{nalog.completed === 1 ? 'Da' : 'Ne'}</td>
@@ -222,11 +222,11 @@ const ViewNalogs: React.FC = () => {
             </div>
 
             {/* Pagination Controls */}
-            <div style={{marginTop: '10px', display: 'flex', justifyContent: 'center'}}>
+            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'center' }}>
                 <button
                     onClick={handlePreviousPage}
                     disabled={currentPage === 1}
-                    style={{marginRight: '10px', padding: '5px 10px'}}
+                    style={{ marginRight: '10px', padding: '5px 10px' }}
                 >
                     Prethodna
                 </button>

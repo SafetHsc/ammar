@@ -509,9 +509,13 @@ app.post('/api/sarzas', async (req, res) => {
         kada_id: number;
     } = req.body;
 
-    // Initialize total_br_kmd and total_skart correctly
-    const total_br_kmd = broj_komada_alat.reduce((acc: number, item: BrojKomadaAlat) => acc + parseInt(item.broj_komada, 10), 0);
-    const total_skart = skart.length ? skart.reduce((acc: number, item: SkartItem) => acc + parseInt(item.skart, 10), 0) : 0;
+    // Filter out empty or invalid skart and broj_komada_alat entries
+    const validSkart = skart.filter(item => item.skart && item.alat && !isNaN(parseInt(item.skart, 10)));
+    const validBrojKomadaAlat = broj_komada_alat.filter(item => item.broj_komada && item.alat && !isNaN(parseInt(item.broj_komada, 10)));
+
+    // Calculate totals only with valid entries
+    const total_br_kmd = validBrojKomadaAlat.reduce((acc, item) => acc + parseInt(item.broj_komada, 10), 0);
+    const total_skart = validSkart.reduce((acc, item) => acc + parseInt(item.skart, 10), 0);
 
     const connection = await db.getConnection();
     try {
@@ -529,45 +533,58 @@ app.post('/api/sarzas', async (req, res) => {
         }
 
         const nalog = nalogRows[0];
-        let remaining = JSON.parse(nalog.remaining_broj_komada_alat) as Array<{ alat: string; broj_komada: number }>;
+        let remaining = JSON.parse(nalog.remaining_broj_komada_alat) as Array<{ alat: string; broj_komada: string }>;
 
+        // Validate skart linkedSarza
+        for (const { skart: skartCount, alat, linkedSarza } of validSkart) {
+            if (linkedSarza) {
+                // Fetch broj_komada_alat from the linked sarza
+                const [linkedSarzaRows] = await connection.query(
+                    'SELECT broj_komada_alat FROM sarzas WHERE id = ?',
+                    [linkedSarza]
+                ) as [{ broj_komada_alat: string }[], any];
 
-        // Add skart from previous sarza into remaining pieces (if any)
-        for (const { skart: skartCount, alat } of skart) {
-            // Ensure skart and alat are valid before adding
-            if (alat && !isNaN(parseInt(skartCount, 10))) {
-                const alatIndex = remaining.findIndex((item) => item.alat === alat);
-                if (alatIndex >= 0) {
-                    remaining[alatIndex].broj_komada += parseInt(skartCount, 10); // Add back skart
-                } else {
-                    remaining.push({ alat, broj_komada: parseInt(skartCount, 10) }); // Add new alat if not found
+                if (!linkedSarzaRows.length) {
+                    throw new Error(`Linked Sarza ID ${linkedSarza} not found`);
                 }
+
+                const linkedSarzaData = JSON.parse(linkedSarzaRows[0].broj_komada_alat) as BrojKomadaAlat[];
+
+                // Ensure alatData.broj_komada is safely converted to a number for arithmetic
+                const alatData = linkedSarzaData.find(item => item.alat === alat);
+                if (!alatData || parseInt(skartCount, 10) > parseInt(alatData.broj_komada, 10)) {
+                    throw new Error(`Insufficient pieces for alat "${alat}" in linked Sarza ID ${linkedSarza}`);
+                }
+
+                // Update alatData.broj_komada safely
+                alatData.broj_komada = (parseInt(alatData.broj_komada, 10) - parseInt(skartCount, 10)).toString();
+            }
+
+            // Add skart back into remaining
+            const alatIndex = remaining.findIndex(item => item.alat === alat);
+            if (alatIndex >= 0) {
+                remaining[alatIndex].broj_komada = (parseInt(remaining[alatIndex].broj_komada, 10) + parseInt(skartCount, 10)).toString();
+            } else {
+                remaining.push({ alat, broj_komada: parseInt(skartCount, 10).toString() });
             }
         }
-
-        // Check if the total requested broj_komada (including skart) exceeds remaining pieces
-        let exceedsLimit = false;
 
         // Deduct requested broj_komada_alat from the remaining pieces
-        for (const { broj_komada, alat } of broj_komada_alat) {
-            const alatIndex = remaining.findIndex((item) => item.alat === alat);
+        for (const { broj_komada, alat } of validBrojKomadaAlat) {
+            const alatIndex = remaining.findIndex(item => item.alat === alat);
             if (alatIndex >= 0) {
-                const remainingCount = remaining[alatIndex].broj_komada;
+                const remainingCount = parseInt(remaining[alatIndex].broj_komada, 10);
                 if (parseInt(broj_komada, 10) > remainingCount) {
-                    exceedsLimit = true;
-                    break;
+                    throw new Error(`Requested number of pieces for alat "${alat}" exceeds available remaining pieces`);
                 }
-                remaining[alatIndex].broj_komada -= parseInt(broj_komada, 10); // Deduct the requested pieces
+                remaining[alatIndex].broj_komada = (remainingCount - parseInt(broj_komada, 10)).toString();
+            } else {
+                throw new Error(`Requested alat "${alat}" not found in remaining pieces`);
             }
         }
 
-        // If exceeds, block the creation and return an error
-        if (exceedsLimit) {
-            throw new Error('Requested number of pieces exceeds available remaining pieces');
-        }
-
-        // Proceed with creating Sarza and Skart entries
-        const serialized_skart = skart.length ? JSON.stringify(skart) : null;
+        // Insert only valid skart and broj_komada_alat into the database
+        const serialized_skart = validSkart.length ? JSON.stringify(validSkart) : null;
 
         const query = `
             INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, total_skart, kada_id, created_at, completed)
@@ -575,7 +592,7 @@ app.post('/api/sarzas', async (req, res) => {
         `;
         const [result] = await connection.execute(query, [
             nalog_id,
-            JSON.stringify(broj_komada_alat),
+            JSON.stringify(validBrojKomadaAlat),
             total_br_kmd,
             serialized_skart,
             total_skart,
@@ -584,8 +601,8 @@ app.post('/api/sarzas', async (req, res) => {
 
         const sarzaId = result.insertId;
 
-        // Insert skart items into the skart table
-        for (const skartItem of skart) {
+        // Insert filtered skart items into the skart table
+        for (const skartItem of validSkart) {
             const skartQuery = `
                 INSERT INTO skart (sarza_id, skart, alat, linked_sarza)
                 VALUES (?, ?, ?, ?)
@@ -601,7 +618,15 @@ app.post('/api/sarzas', async (req, res) => {
         // Update remaining pieces in nalogs table
         await connection.query(
             'UPDATE nalogs SET remaining_broj_komada_alat = ? WHERE broj_naloga = ?',
-            [JSON.stringify(remaining), nalog_id]
+            [
+                JSON.stringify(
+                    remaining.map(item => ({
+                        alat: item.alat,
+                        broj_komada: item.broj_komada, // already a string
+                    }))
+                ),
+                nalog_id,
+            ]
         );
 
         // Commit the transaction
@@ -612,12 +637,14 @@ app.post('/api/sarzas', async (req, res) => {
         // Rollback the transaction in case of error
         await connection.rollback();
         console.error('Error creating Sarza and updating Nalogs:', error);
-        res.status(500).json({ message: 'Preostali dijelovi komada i alati se ne podudaraju', error: (error as Error).message });
+        res.status(500).json({ message: 'Error processing request', error: (error as Error).message });
     } finally {
         // Release the connection back to the pool
         connection.release();
     }
 });
+
+
 
 // GET /api/sarzas
 app.get('/api/sarzas', async (_req, res) => {

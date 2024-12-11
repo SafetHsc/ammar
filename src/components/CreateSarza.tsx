@@ -76,6 +76,11 @@ const CreateSarza = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (!validateSkartLinkSarza()) {
+            alert('Ako popunite bilo koje od polja za "Škart, Alat i Odaberi Šaržu", morate popuniti sva tri polja.');
+            return;
+        }
+
         const formData = {
             nalog_id: nalogId,
             broj_komada_alat: brojKomadaAlat,
@@ -151,6 +156,15 @@ const CreateSarza = () => {
         // Find the selected Kada's details for temperature display
         const selectedKada = allKadas.find(kada => kada.id === Number(selectedId));
         setSelectedKada(selectedKada || null);
+    };
+
+    const validateSkartLinkSarza = () => {
+        return skartLinkSarza.every(item => {
+            const fieldsFilled = !!item.skart || !!item.alat || !!item.linkedSarza;
+            const allFieldsRequired = item.skart && item.alat && item.linkedSarza;
+            // If any field is filled, all fields must be filled
+            return !fieldsFilled || allFieldsRequired;
+        });
     };
 
     const resetForm = () => {
