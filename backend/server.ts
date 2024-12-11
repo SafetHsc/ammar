@@ -509,20 +509,16 @@ app.post('/api/sarzas', async (req, res) => {
         kada_id: number;
     } = req.body;
 
-    // Filter out empty or invalid skart and broj_komada_alat entries
     const validSkart = skart.filter(item => item.skart && item.alat && !isNaN(parseInt(item.skart, 10)));
     const validBrojKomadaAlat = broj_komada_alat.filter(item => item.broj_komada && item.alat && !isNaN(parseInt(item.broj_komada, 10)));
 
-    // Calculate totals only with valid entries
     const total_br_kmd = validBrojKomadaAlat.reduce((acc, item) => acc + parseInt(item.broj_komada, 10), 0);
     const total_skart = validSkart.reduce((acc, item) => acc + parseInt(item.skart, 10), 0);
 
     const connection = await db.getConnection();
     try {
-        // Start the transaction
         await connection.beginTransaction();
 
-        // Fetch remaining pieces from nalogs
         const [nalogRows] = await connection.query(
             'SELECT remaining_broj_komada_alat FROM nalogs WHERE broj_naloga = ?',
             [nalog_id]
@@ -535,32 +531,37 @@ app.post('/api/sarzas', async (req, res) => {
         const nalog = nalogRows[0];
         let remaining = JSON.parse(nalog.remaining_broj_komada_alat) as Array<{ alat: string; broj_komada: string }>;
 
-        // Validate skart linkedSarza
         for (const { skart: skartCount, alat, linkedSarza } of validSkart) {
             if (linkedSarza) {
-                // Fetch broj_komada_alat from the linked sarza
                 const [linkedSarzaRows] = await connection.query(
-                    'SELECT broj_komada_alat FROM sarzas WHERE id = ?',
+                    'SELECT broj_komada_alat, skart FROM sarzas WHERE id = ?',
                     [linkedSarza]
-                ) as [{ broj_komada_alat: string }[], any];
+                ) as [{ broj_komada_alat: string; skart: string | null }[], any];
 
                 if (!linkedSarzaRows.length) {
                     throw new Error(`Linked Sarza ID ${linkedSarza} not found`);
                 }
 
-                const linkedSarzaData = JSON.parse(linkedSarzaRows[0].broj_komada_alat) as BrojKomadaAlat[];
+                const linkedData = JSON.parse(linkedSarzaRows[0].broj_komada_alat) as BrojKomadaAlat[];
+                const alatData = linkedData.find(item => item.alat === alat);
 
-                // Ensure alatData.broj_komada is safely converted to a number for arithmetic
-                const alatData = linkedSarzaData.find(item => item.alat === alat);
                 if (!alatData || parseInt(skartCount, 10) > parseInt(alatData.broj_komada, 10)) {
                     throw new Error(`Insufficient pieces for alat "${alat}" in linked Sarza ID ${linkedSarza}`);
                 }
 
-                // Update alatData.broj_komada safely
-                alatData.broj_komada = (parseInt(alatData.broj_komada, 10) - parseInt(skartCount, 10)).toString();
+                const currentSkart = linkedSarzaRows[0].skart ? JSON.parse(linkedSarzaRows[0].skart) : [];
+
+                currentSkart.push({
+                    skart: skartCount,
+                    alat,
+                });
+
+                await connection.query(
+                    'UPDATE sarzas SET skart = ? WHERE id = ?',
+                    [JSON.stringify(currentSkart), linkedSarza]
+                );
             }
 
-            // Add skart back into remaining
             const alatIndex = remaining.findIndex(item => item.alat === alat);
             if (alatIndex >= 0) {
                 remaining[alatIndex].broj_komada = (parseInt(remaining[alatIndex].broj_komada, 10) + parseInt(skartCount, 10)).toString();
@@ -569,7 +570,6 @@ app.post('/api/sarzas', async (req, res) => {
             }
         }
 
-        // Deduct requested broj_komada_alat from the remaining pieces
         for (const { broj_komada, alat } of validBrojKomadaAlat) {
             const alatIndex = remaining.findIndex(item => item.alat === alat);
             if (alatIndex >= 0) {
@@ -583,9 +583,6 @@ app.post('/api/sarzas', async (req, res) => {
             }
         }
 
-        // Insert only valid skart and broj_komada_alat into the database
-        const serialized_skart = validSkart.length ? JSON.stringify(validSkart) : null;
-
         const query = `
             INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, total_skart, kada_id, created_at, completed)
             VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
@@ -594,14 +591,13 @@ app.post('/api/sarzas', async (req, res) => {
             nalog_id,
             JSON.stringify(validBrojKomadaAlat),
             total_br_kmd,
-            serialized_skart,
+            null,
             total_skart,
             kada_id,
         ]) as [QueryResultWithInsertId, any];
 
         const sarzaId = result.insertId;
 
-        // Insert filtered skart items into the skart table
         for (const skartItem of validSkart) {
             const skartQuery = `
                 INSERT INTO skart (sarza_id, skart, alat, linked_sarza)
@@ -615,34 +611,31 @@ app.post('/api/sarzas', async (req, res) => {
             ]);
         }
 
-        // Update remaining pieces in nalogs table
         await connection.query(
             'UPDATE nalogs SET remaining_broj_komada_alat = ? WHERE broj_naloga = ?',
             [
                 JSON.stringify(
                     remaining.map(item => ({
                         alat: item.alat,
-                        broj_komada: item.broj_komada, // already a string
+                        broj_komada: item.broj_komada,
                     }))
                 ),
                 nalog_id,
             ]
         );
 
-        // Commit the transaction
         await connection.commit();
 
         res.json({ message: 'Sarza and Skart entries created successfully', id: sarzaId });
     } catch (error) {
-        // Rollback the transaction in case of error
         await connection.rollback();
         console.error('Error creating Sarza and updating Nalogs:', error);
         res.status(500).json({ message: 'Error processing request', error: (error as Error).message });
     } finally {
-        // Release the connection back to the pool
         connection.release();
     }
 });
+
 
 
 
