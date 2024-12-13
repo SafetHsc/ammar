@@ -501,19 +501,20 @@ type QueryResultWithInsertId = { insertId: number; affectedRows: number };
 type Nalog = { remaining_broj_komada_alat: string };
 
 // POST /api/sarzas
+// @ts-ignore
 app.post('/api/sarzas', async (req, res) => {
-    const { nalog_id, broj_komada_alat, skart, kada_id }: {
+    const { nalog_id, broj_komada_alat, kada_id }: {
         nalog_id: string;
         broj_komada_alat: BrojKomadaAlat[];
-        skart: SkartItem[];
         kada_id: number;
     } = req.body;
 
-    const validSkart = skart.filter(item => item.skart && item.alat && !isNaN(parseInt(item.skart, 10)));
-    const validBrojKomadaAlat = broj_komada_alat.filter(item => item.broj_komada && item.alat && !isNaN(parseInt(item.broj_komada, 10)));
+    if (kada_id === null || kada_id === undefined) {
+        return res.status(400).json({ message: 'kada_id is required and cannot be null' });
+    }
 
+    const validBrojKomadaAlat = broj_komada_alat.filter(item => item.broj_komada && item.alat && !isNaN(parseInt(item.broj_komada, 10)));
     const total_br_kmd = validBrojKomadaAlat.reduce((acc, item) => acc + parseInt(item.broj_komada, 10), 0);
-    const total_skart = validSkart.reduce((acc, item) => acc + parseInt(item.skart, 10), 0);
 
     const connection = await db.getConnection();
     try {
@@ -529,46 +530,17 @@ app.post('/api/sarzas', async (req, res) => {
         }
 
         const nalog = nalogRows[0];
-        let remaining = JSON.parse(nalog.remaining_broj_komada_alat) as Array<{ alat: string; broj_komada: string }>;
-
-        for (const { skart: skartCount, alat, linkedSarza } of validSkart) {
-            if (linkedSarza) {
-                const [linkedSarzaRows] = await connection.query(
-                    'SELECT broj_komada_alat, skart FROM sarzas WHERE id = ?',
-                    [linkedSarza]
-                ) as [{ broj_komada_alat: string; skart: string | null }[], any];
-
-                if (!linkedSarzaRows.length) {
-                    throw new Error(`Linked Sarza ID ${linkedSarza} not found`);
-                }
-
-                const linkedData = JSON.parse(linkedSarzaRows[0].broj_komada_alat) as BrojKomadaAlat[];
-                const alatData = linkedData.find(item => item.alat === alat);
-
-                if (!alatData || parseInt(skartCount, 10) > parseInt(alatData.broj_komada, 10)) {
-                    throw new Error(`Insufficient pieces for alat "${alat}" in linked Sarza ID ${linkedSarza}`);
-                }
-
-                const currentSkart = linkedSarzaRows[0].skart ? JSON.parse(linkedSarzaRows[0].skart) : [];
-
-                currentSkart.push({
-                    skart: skartCount,
-                    alat,
-                });
-
-                await connection.query(
-                    'UPDATE sarzas SET skart = ? WHERE id = ?',
-                    [JSON.stringify(currentSkart), linkedSarza]
-                );
-            }
-
-            const alatIndex = remaining.findIndex(item => item.alat === alat);
-            if (alatIndex >= 0) {
-                remaining[alatIndex].broj_komada = (parseInt(remaining[alatIndex].broj_komada, 10) + parseInt(skartCount, 10)).toString();
+        let remaining;
+        try {
+            remaining = JSON.parse(nalog.remaining_broj_komada_alat) as Array<{ alat: string; broj_komada: string }>;
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Invalid JSON in remaining_broj_komada_alat: ${error.message}`);
             } else {
-                remaining.push({ alat, broj_komada: parseInt(skartCount, 10).toString() });
+                throw new Error('An unknown error occurred while parsing JSON.');
             }
         }
+
 
         for (const { broj_komada, alat } of validBrojKomadaAlat) {
             const alatIndex = remaining.findIndex(item => item.alat === alat);
@@ -584,32 +556,15 @@ app.post('/api/sarzas', async (req, res) => {
         }
 
         const query = `
-            INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, total_skart, kada_id, created_at, completed)
-            VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
+            INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, kada_id, created_at, completed)
+            VALUES (?, ?, ?, NULL, ?, NOW(), 0)
         `;
         const [result] = await connection.execute(query, [
             nalog_id,
             JSON.stringify(validBrojKomadaAlat),
             total_br_kmd,
-            null,
-            total_skart,
-            kada_id,
+            kada_id, // Ensure this value is passed correctly
         ]) as [QueryResultWithInsertId, any];
-
-        const sarzaId = result.insertId;
-
-        for (const skartItem of validSkart) {
-            const skartQuery = `
-                INSERT INTO skart (sarza_id, skart, alat, linked_sarza)
-                VALUES (?, ?, ?, ?)
-            `;
-            await connection.execute(skartQuery, [
-                sarzaId,
-                skartItem.skart,
-                skartItem.alat,
-                skartItem.linkedSarza || null,
-            ]);
-        }
 
         await connection.query(
             'UPDATE nalogs SET remaining_broj_komada_alat = ? WHERE broj_naloga = ?',
@@ -625,19 +580,83 @@ app.post('/api/sarzas', async (req, res) => {
         );
 
         await connection.commit();
-
-        res.json({ message: 'Sarza and Skart entries created successfully', id: sarzaId });
+        res.json({ message: 'Sarza created successfully', id: result.insertId });
     } catch (error) {
         await connection.rollback();
-        console.error('Error creating Sarza and updating Nalogs:', error);
+        console.error('Error during transaction:', error);
         res.status(500).json({ message: 'Error processing request', error: (error as Error).message });
     } finally {
         connection.release();
     }
 });
 
+app.post('/api/skarts', async (req, res) => {
+    const { skart }: { skart: SkartItem[] } = req.body;
 
+    // Filter and validate incoming skart data
+    const validSkart = skart.filter((item) => item.skart && item.alat && !isNaN(parseInt(item.skart, 10)));
+    const connection = await db.getConnection();
 
+    try {
+        await connection.beginTransaction();
+
+        for (const { skart: skartCount, alat, linkedSarza } of validSkart) {
+
+            // Fetch data from sarzas and nalogs
+            const [linkedSarzaRows] = (await connection.query(
+                `SELECT s.broj_komada_alat, s.skart, n.id AS linked_nalog, n.remaining_broj_komada_alat
+                 FROM sarzas s
+                 JOIN nalogs n ON s.nalog_id = n.broj_naloga
+                 WHERE s.id = ?`,
+                [linkedSarza]
+            )) as RowDataPacket[][];
+
+            if (linkedSarzaRows.length === 0) {
+                throw new Error(`Linked Sarza ID ${linkedSarza} not found`);
+            }
+
+            const sarzaData = linkedSarzaRows[0];
+            const currentSkart = sarzaData.skart ? JSON.parse(sarzaData.skart) : [];
+            const currentRemainingAlat = sarzaData.remaining_broj_komada_alat
+                ? JSON.parse(sarzaData.remaining_broj_komada_alat)
+                : [];
+
+            // Update skart in sarzas (ensure all values are strings in JSON)
+            currentSkart.push({ skart: skartCount.toString(), alat });
+            await connection.query('UPDATE sarzas SET skart = ? WHERE id = ?', [
+                JSON.stringify(currentSkart),
+                linkedSarza,
+            ]);
+
+            // Update remaining_broj_komada_alat in nalogs
+            const alatIndex = currentRemainingAlat.findIndex((item: any) => item.alat === alat);
+            if (alatIndex !== -1) {
+                // Add skart to the existing number (ensuring numbers are strings)
+                currentRemainingAlat[alatIndex].broj_komada = (
+                    parseInt(currentRemainingAlat[alatIndex].broj_komada, 10) +
+                    parseInt(skartCount, 10)
+                ).toString();
+            } else {
+                // Add new alat with skart as a positive number (as string)
+                currentRemainingAlat.push({ alat, broj_komada: skartCount.toString() });
+            }
+
+            await connection.query('UPDATE nalogs SET remaining_broj_komada_alat = ? WHERE id = ?', [
+                JSON.stringify(currentRemainingAlat),
+                sarzaData.linked_nalog,
+            ]);
+        }
+
+        await connection.commit();
+        res.json({ message: 'Skart updated successfully' });
+    } catch (error) {
+        console.error('Error during skart processing:', error); // Log error
+        await connection.rollback();
+        res.status(500).json({ message: 'Error processing request', error: (error as Error).message });
+    } finally {
+        connection.release();
+    }
+});
 
 // GET /api/sarzas
 app.get('/api/sarzas', async (_req, res) => {
@@ -656,7 +675,7 @@ app.get('/api/sarzas/linked/:nalogId', async (req, res) => {
 
     try {
         // Perform the query using async/await
-        const [results] = await db.query('SELECT * FROM sarzas WHERE nalog_id = ?', [nalogId]);
+        const [results] = await db.query('SELECT * FROM sarzas WHERE nalog_id = ? AND completed = 0', [nalogId]);
 
         res.json(results);
     } catch (error) {
@@ -808,6 +827,32 @@ app.put('/api/nalogs/:id/complete', async (req, res) => {
         res.status(500).json({ message: 'Error updating nalog' });
     }
 });
+
+// @ts-ignore
+app.get('/api/sarzas/incomplete/:nalogId', async (req, res) => {
+    const { nalogId } = req.params;
+
+    try {
+        // Query to fetch incomplete sarzas for the given nalog_id
+        const [rows] = await db.query<RowDataPacket[]>(
+            `SELECT sarzas.id, sarzas.completed, sarzas.nalog_id, sarzas.broj_komada_alat, sarzas.skart
+            FROM sarzas
+            WHERE sarzas.nalog_id = ? AND sarzas.completed = 0`, [nalogId]
+        );
+
+        // If no sarzas found, send a 404 response
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'No incomplete sarzas found for the selected nalog' });
+        }
+
+        // Return the incomplete sarzas
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching incomplete sarzas:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 
 // Start the server
 app.listen(port, () => {

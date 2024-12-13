@@ -15,6 +15,9 @@ const NaloziSarze = () => {
                 <Link to="/nova-sarza" style={styles.link}>
                     <button style={styles.button}>KREIRAJ ŠARŽU</button>
                 </Link>
+                <Link to="/dodijeli-skart" style={styles.link}>
+                    <button style={styles.button}>EVIDENCIJA ŠKARTA</button>
+                </Link>
                 <Link to="/vidi-nalog" style={styles.link}>
                     <button style={styles.button}>PREGLED NALOGA</button>
                 </Link>

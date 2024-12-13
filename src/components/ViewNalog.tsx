@@ -176,8 +176,8 @@ const ViewNalogs: React.FC = () => {
                         <th>Opis</th>
                         <th>Neobrađeni Alati</th>
                         <th>Kompletirano</th>
-                        <th>Kreiran</th>
-                        <th>Završen</th>
+                        <th>Datum Kreiranja</th>
+                        <th>Datum Završetka</th>
                         <th>Šarže (ID)</th>
                     </tr>
                     </thead>

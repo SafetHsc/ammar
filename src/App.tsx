@@ -14,6 +14,7 @@ import ViewNalog from "./components/ViewNalog.tsx";
 import ViewSarza from "./components/ViewSarza.tsx";
 import KompletirajNalog from "./components/KompletirajNalog.tsx";
 import KompletirajSarzu from "./components/KompletirajSarzu.tsx";
+import CreateSkart from "./components/CreateSkart.tsx";
 
 import './App.css';
 
@@ -200,6 +201,7 @@ const App: React.FC = () => {
             <Route path="/vidi-sarze" element={isLoggedIn ? <ViewSarza /> : <InvalidLink />} />
             <Route path="/kompletiraj-nalog" element={isLoggedIn ? <KompletirajNalog /> : <InvalidLink />} />
             <Route path="/kompletiraj-sarzu" element={isLoggedIn ? <KompletirajSarzu /> : <InvalidLink />} />
+            <Route path="/dodijeli-skart" element={isLoggedIn ? <CreateSkart /> : <InvalidLink />} />
             <Route path="/korisnici" element={isLoggedIn && role === 1 ? <Korisnici /> : <InvalidLink />} />
             {/*<Route path="/notifications" element={isLoggedIn ? <Notifications /> : <InvalidLink />} />*/}
 

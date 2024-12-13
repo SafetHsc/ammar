@@ -4,13 +4,9 @@ import { Link } from "react-router-dom";
 const CreateSarza = () => {
     const [nalogs, setNalog] = useState<any[]>([]); // List of nalogs to populate the dropdown
     const [brojKomadaAlat, setBrojKomadaAlat] = useState<any[]>([{ broj_komada: '', alat: '' }]); // Start with one default field
-    const [skartLinkSarza, setSkartLinkSarza] = useState<any[]>([{ skart: '', linkedSarza: '', alat: '' }]); // Start with one default field
     const [kadaId, setKadaId] = useState<number | null>(null); // Dropdown for kada_id
     const [nalogId, setNalogId] = useState<string>(''); // Selected nalog_id (broj_naloga)
     const [allKadas, setAllKadas] = useState<any[]>([]); // List of kadas to populate the kada dropdown
-    // @ts-ignore
-    const [selectedKada, setSelectedKada] = useState<any>(null); // Selected kada for temperature display
-    const [linkedSarzas, setLinkedSarzas] = useState<any[]>([]); // List of linked Sarzas for the selected Nalog
     const [availableAlats, setAvailableAlats] = useState<string[]>([]); // List of alat names for the selected nalog
 
     useEffect(() => {
@@ -51,47 +47,14 @@ const CreateSarza = () => {
         }
     }, [nalogId]);
 
-    useEffect(() => {
-        if (nalogId) {
-            fetch(`/api/sarzas/linked/${encodeURIComponent(nalogId)}`) // Encode URL
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then((data) => {
-                    setLinkedSarzas(data);
-                    setSkartLinkSarza([{ skart: '', linkedSarza: '', alat: '' }]);
-                })
-                .catch((error) => {
-                    console.error('Error fetching linked Sarzas:', error);
-                });
-        } else {
-            setLinkedSarzas([]);
-            setSkartLinkSarza([{ skart: '', linkedSarza: '', alat: '' }]);
-        }
-    }, [nalogId]);
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!validateSkartLinkSarza()) {
-            alert('Ako popunite bilo koje od polja za "Škart, Alat i Odaberi Šaržu", morate popuniti sva tri polja.');
-            return;
-        }
 
         const formData = {
             nalog_id: nalogId,
             broj_komada_alat: brojKomadaAlat,
-            skart: skartLinkSarza.map(item => ({
-                skart: item.skart,
-                alat: item.alat,
-                linkedSarza: item.linkedSarza || null,
-            })),
             kada_id: kadaId
         };
-
         try {
             const response = await fetch('/api/sarzas', {
                 method: 'POST',
@@ -102,7 +65,6 @@ const CreateSarza = () => {
             });
 
             const result = await response.json();
-
             if (response.ok) {
                 alert(`Šarža uspješno kreirana, ID: ${result.id}`);
                 resetForm();
@@ -132,49 +94,17 @@ const CreateSarza = () => {
         setBrojKomadaAlat(updated);
     };
 
-    const handleAddSkartLinkSarza = () => {
-        if (skartLinkSarza.length < 3) {
-            setSkartLinkSarza([...skartLinkSarza, { skart: '', linkedSarza: '', alat: '' }]);
-        }
-    };
-
-    const handleRemoveSkartLinkSarza = (index: number) => {
-        const updated = skartLinkSarza.filter((_, i) => i !== index);
-        setSkartLinkSarza(updated);
-    };
-
-    const handleChangeSkartLinkSarza = (index: number, field: string, value: any) => {
-        const updated = [...skartLinkSarza];
-        updated[index][field] = value;
-        setSkartLinkSarza(updated);
-    };
-
     const handleKadaSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedId = e.target.value;
         setKadaId(Number(selectedId));
-
-        // Find the selected Kada's details for temperature display
-        const selectedKada = allKadas.find(kada => kada.id === Number(selectedId));
-        setSelectedKada(selectedKada || null);
-    };
-
-    const validateSkartLinkSarza = () => {
-        return skartLinkSarza.every(item => {
-            const fieldsFilled = !!item.skart || !!item.alat || !!item.linkedSarza;
-            const allFieldsRequired = item.skart && item.alat && item.linkedSarza;
-            // If any field is filled, all fields must be filled
-            return !fieldsFilled || allFieldsRequired;
-        });
     };
 
     const resetForm = () => {
         setNalogId('');
         setBrojKomadaAlat([{ broj_komada: '', alat: '' }]);
-        setSkartLinkSarza([{ skart: '', linkedSarza: '', alat: '' }]);
         setKadaId(null);
-        setSelectedKada(null);
-        setLinkedSarzas([]);
     };
+
     return (
         <div className="createsarza">
             <div className="sarza-div">
@@ -220,51 +150,8 @@ const CreateSarza = () => {
                             </div>
                         ))}
                         {brojKomadaAlat.length < 3 && (
-                            <button type="button" onClick={handleAddBrojKomadaAlat} className="sarza-add-bkalat-btn">+
-                                Dodaj</button>
-                        )}
-                    </div>
-
-                    {/* Skart, Linked Sarza, and Alat Pair Input */}
-                    <div className="input-div">
-                        <label className="sarza-labels">Škart, Alat i iz šarže:</label>
-                        {skartLinkSarza.map((item, index) => (
-                            <div key={index} className="sarza-bk-alat-div">
-                                <input type="number" value={item.skart}
-                                       onChange={(e) => handleChangeSkartLinkSarza(index, 'skart', e.target.value)}
-                                       placeholder="Skart" min={1} max={5000} className="sarza-bk"/>
-                                <select
-                                    value={item.alat}
-                                    onChange={(e) => handleChangeSkartLinkSarza(index, 'alat', e.target.value)} // Correct handler
-                                    className="sarza-alat-dropdown"
-                                >
-                                    <option value="">Odaberi Alat</option>
-                                    {availableAlats.map((alat, i) => (
-                                        <option key={i} value={alat}>
-                                            {alat}
-                                        </option>
-                                    ))}
-                                </select>
-                                <select value={item.linkedSarza || ''}
-                                        onChange={(e) => handleChangeSkartLinkSarza(index, 'linkedSarza', e.target.value)}
-                                        className="linked-sarza">
-                                    <option value="">Odaberi Šaržu</option>
-                                    {linkedSarzas.map((sarza) => (
-                                        <option key={sarza.id} value={sarza.id}>
-                                            {sarza.id}
-                                        </option>
-                                    ))}
-                                </select>
-
-                                {skartLinkSarza.length > 1 && (
-                                    <button type="button" onClick={() => handleRemoveSkartLinkSarza(index)}
-                                            className="sarza-remove-btn">Ukloni</button>
-                                )}
-                            </div>
-                        ))}
-                        {skartLinkSarza.length < 3 && (
-                            <button type="button" onClick={handleAddSkartLinkSarza} className="sarza-add-bkalat-btn">+
-                                Dodaj</button>
+                            <button type="button" onClick={handleAddBrojKomadaAlat} className="sarza-add-bkalat-btn">
+                                + Dodaj</button>
                         )}
                     </div>
 
@@ -302,7 +189,6 @@ const CreateSarza = () => {
             </div>
         </div>
     );
-
 };
 
 export default CreateSarza;
