@@ -94,7 +94,7 @@ const CreateSkart = () => {
             const result = await response.json();
 
             if (response.ok) {
-                alert('Skart successfully updated');
+                alert('Škart Uspješno Unešen!');
                 resetForm();
             } else {
                 alert(`Error: ${result.message}`);
@@ -132,8 +132,10 @@ const CreateSkart = () => {
         const sarza = sarzaData[linkedSarzaId];
         if (!sarza) return false;
 
-        const alatSkart = sarza.skartData.filter((item: any) => item.alat === alat)
-            .reduce((acc: number, item: any) => acc + parseInt(item.skart), 0);
+        const alatSkart = sarza.skartData
+            .filter((item: any) => item.alat === alat)
+            .reduce((acc: number, item: any) => acc + parseInt(item.skart, 10), 0); // parseInt(item.skart), 0);
+
         const alatBrojKomada = sarza.alatData.find((item: any) => item.alat === alat)?.broj_komada || 0;
 
         return alatSkart + skartCount > alatBrojKomada;

@@ -509,24 +509,31 @@ app.post('/api/sarzas', async (req, res) => {
         kada_id: number;
     } = req.body;
 
+    // Validate kada_id
     if (kada_id === null || kada_id === undefined) {
-        return res.status(400).json({ message: 'kada_id is required and cannot be null' });
+        return res.status(400).json({ message: 'Morate odabrati kadu' });
     }
 
+    // Validate and filter broj_komada_alat
     const validBrojKomadaAlat = broj_komada_alat.filter(item => item.broj_komada && item.alat && !isNaN(parseInt(item.broj_komada, 10)));
+    if (validBrojKomadaAlat.length !== broj_komada_alat.length) {
+        return res.status(400).json({ message: 'Invalid or incomplete data in broj_komada_alat' });
+    }
+
     const total_br_kmd = validBrojKomadaAlat.reduce((acc, item) => acc + parseInt(item.broj_komada, 10), 0);
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
+        // Fetch nalog data
         const [nalogRows] = await connection.query(
             'SELECT remaining_broj_komada_alat FROM nalogs WHERE broj_naloga = ?',
             [nalog_id]
         ) as [Nalog[], any];
 
         if (!nalogRows.length) {
-            throw new Error('Nalog not found');
+            return res.status(404).json({ message: `Nalog with ID ${nalog_id} not found` });
         }
 
         const nalog = nalogRows[0];
@@ -534,27 +541,32 @@ app.post('/api/sarzas', async (req, res) => {
         try {
             remaining = JSON.parse(nalog.remaining_broj_komada_alat) as Array<{ alat: string; broj_komada: string }>;
         } catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`Invalid JSON in remaining_broj_komada_alat: ${error.message}`);
-            } else {
-                throw new Error('An unknown error occurred while parsing JSON.');
-            }
+            return res.status(400).json({
+                message: 'Invalid JSON format in remaining_broj_komada_alat',
+                error: (error as Error).message
+            });
         }
 
-
+        // Process validBrojKomadaAlat and update remaining counts
         for (const { broj_komada, alat } of validBrojKomadaAlat) {
             const alatIndex = remaining.findIndex(item => item.alat === alat);
             if (alatIndex >= 0) {
                 const remainingCount = parseInt(remaining[alatIndex].broj_komada, 10);
                 if (parseInt(broj_komada, 10) > remainingCount) {
-                    throw new Error(`Requested number of pieces for alat "${alat}" exceeds available remaining pieces`);
+                    return res.status(400).json({
+                        message: `Broj Komada za "${alat}" Prekoračuje Limit Ukupnih Preostalih Dijelova`,
+                        remainingCount
+                    });
                 }
                 remaining[alatIndex].broj_komada = (remainingCount - parseInt(broj_komada, 10)).toString();
             } else {
-                throw new Error(`Requested alat "${alat}" not found in remaining pieces`);
+                return res.status(404).json({
+                    message: `Alat "${alat}" Ne Postoji`
+                });
             }
         }
 
+        // Insert sarza into the database
         const query = `
             INSERT INTO sarzas (nalog_id, broj_komada_alat, total_br_kmd, skart, kada_id, created_at, completed)
             VALUES (?, ?, ?, NULL, ?, NOW(), 0)
@@ -563,24 +575,22 @@ app.post('/api/sarzas', async (req, res) => {
             nalog_id,
             JSON.stringify(validBrojKomadaAlat),
             total_br_kmd,
-            kada_id, // Ensure this value is passed correctly
+            kada_id,
         ]) as [QueryResultWithInsertId, any];
 
+        // Update nalog remaining counts
         await connection.query(
             'UPDATE nalogs SET remaining_broj_komada_alat = ? WHERE broj_naloga = ?',
             [
                 JSON.stringify(
-                    remaining.map(item => ({
-                        alat: item.alat,
-                        broj_komada: item.broj_komada,
-                    }))
+                    remaining.map(item => ({ alat: item.alat, broj_komada: item.broj_komada }))
                 ),
                 nalog_id,
             ]
         );
 
         await connection.commit();
-        res.json({ message: 'Sarza created successfully', id: result.insertId });
+        res.json({ message: 'Šarza Uspješno Kreirana: ', id: result.insertId });
     } catch (error) {
         await connection.rollback();
         console.error('Error during transaction:', error);
@@ -589,6 +599,7 @@ app.post('/api/sarzas', async (req, res) => {
         connection.release();
     }
 });
+
 
 app.post('/api/skarts', async (req, res) => {
     const { skart }: { skart: SkartItem[] } = req.body;
@@ -648,11 +659,11 @@ app.post('/api/skarts', async (req, res) => {
         }
 
         await connection.commit();
-        res.json({ message: 'Skart updated successfully' });
+        res.json({ message: 'Škart Uspješno Unešen!' });
     } catch (error) {
         console.error('Error during skart processing:', error); // Log error
         await connection.rollback();
-        res.status(500).json({ message: 'Error processing request', error: (error as Error).message });
+        res.status(500).json({ message: 'Pogreška u unosu!', error: (error as Error).message });
     } finally {
         connection.release();
     }
@@ -675,7 +686,7 @@ app.get('/api/sarzas/linked/:nalogId', async (req, res) => {
 
     try {
         // Perform the query using async/await
-        const [results] = await db.query('SELECT * FROM sarzas WHERE nalog_id = ? AND completed = 0', [nalogId]);
+        const [results] = await db.query('SELECT * FROM sarzas WHERE nalog_id = ? AND completed = 0 AND skart IS NULL', [nalogId]);
 
         res.json(results);
     } catch (error) {

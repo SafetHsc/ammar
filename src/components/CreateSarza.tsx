@@ -99,6 +99,14 @@ const CreateSarza = () => {
         setKadaId(Number(selectedId));
     };
 
+    // Get the list of available alats excluding those already selected
+    const getFilteredAlats = (index: number) => {
+        const selectedAlats = brojKomadaAlat
+            .filter((_, i) => i !== index) // Exclude the current row
+            .map((item) => item.alat); // Get selected alats
+        return availableAlats.filter((alat) => !selectedAlats.includes(alat));
+    };
+
     const resetForm = () => {
         setNalogId('');
         setBrojKomadaAlat([{ broj_komada: '', alat: '' }]);
@@ -138,7 +146,7 @@ const CreateSarza = () => {
                                         onChange={(e) => handleChangeBrojKomadaAlat(index, 'alat', e.target.value)}
                                         required className="sarza-alat-dropdown">
                                     <option value="">Odaberi Alat</option>
-                                    {availableAlats.map((alat, i) => (
+                                    {getFilteredAlats(index).map((alat, i) => (
                                         <option key={i} value={alat}>
                                             {alat}
                                         </option>
@@ -164,28 +172,15 @@ const CreateSarza = () => {
                                 <option key={kada.id} value={kada.id}>
                                     {kada.id}
                                 </option>
-
                             ))}
                         </select>
                     </div>
-
-                    {/* Display Temperatures */}
-                    {/*{selectedKada && (*/}
-                    {/*    <div style={{marginTop: '5px'}}>*/}
-                    {/*        <h4 style={{color: '#555'}}>Temperature Kada</h4>*/}
-                    {/*        <p style={{color: '#333'}}>Gornja Temperatura: {selectedKada.topTemperature}°C</p>*/}
-                    {/*        <p style={{color: '#333'}}>Trenutna Temperatura: {selectedKada.currentTemperature}°C</p>*/}
-                    {/*        <p style={{color: '#333'}}>Donja Temperatura: {selectedKada.bottomTemperature}°C</p>*/}
-                    {/*    </div>*/}
-                    {/*)}*/}
 
                     {/* Submit Button */}
                     <div className="sarza-submit">
                         <button type="submit" className="sarza-submit-btn">Kreiraj Šaržu</button>
                     </div>
                 </form>
-
-                {/*{message && <div style={{textAlign: 'center', marginTop: '20px', color: '#333'}}>{message}</div>}*/}
             </div>
         </div>
     );
