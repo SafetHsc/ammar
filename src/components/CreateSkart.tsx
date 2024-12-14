@@ -46,28 +46,20 @@ const CreateSkart = () => {
     useEffect(() => {
         const errors: string[] = [];
 
-        // Check if all skartLinkSarza rows are completed
-        // if (skartLinkSarza.some((item) => !item.skart || !item.alat)) {
-        //     errors.push("Sva polja u `škart` i `alat` moraju biti popunjena!");
-        // }
-
         // Check if a Sarza is selected
-        // if (!selectedSarza) {
-        //     errors.push("Odaberite Šaržu");
-        // }
+        if (!selectedSarza) {
+            errors.push("Odaberite Nalog i Šaržu");
+        }
 
         // Check for skart exceeding limits
         skartLinkSarza.forEach((item, index) => {
-            if (!item.skart) {
-                errors.push(`Red ${index + 1}: Unesite Škart.`);
-            }
-            if (!item.alat) {
-                errors.push(`Red ${index + 1}: Odaberite Alat.`);
+            if (!item.skart || !item.alat) {
+                errors.push("Sva polja u `škart` i `alat` moraju biti popunjena");
             } else if (
                 item.skart && // Validate limit only after alat is selected
                 isSkartExceeds(parseInt(item.skart, 10), item.alat, selectedSarza)
             ) {
-                errors.push(`Red ${index + 1}: Škart Prekoračuje Limit za \`${item.alat}\`.`);
+                errors.push(`Red ${index + 1}: Škart Prekoračuje Limit za \`${item.alat}\``);
             }
         });
 
@@ -76,11 +68,6 @@ const CreateSkart = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        // if (!selectedSarza) {
-        //     alert('Odaberite Šaržu.');
-        //     return;
-        // }
 
         const formData = { skart: skartLinkSarza.map(item => ({ ...item, linkedSarza: selectedSarza })) };
 
@@ -140,11 +127,6 @@ const CreateSkart = () => {
 
         return alatSkart + skartCount > alatBrojKomada;
     };
-
-    // const isFormValid = () => {
-    //     return skartLinkSarza.every((item) => item.skart && item.alat && selectedSarza) &&
-    //         !skartLinkSarza.some(item => isSkartExceeds(parseInt(item.skart, 10), item.alat, selectedSarza));
-    // };
 
     const getAvailableAlatsForRow = (index: number): string[] => {
         const sarza = sarzaData[selectedSarza];
@@ -208,7 +190,7 @@ const CreateSkart = () => {
                                     type="number"
                                     value={item.skart}
                                     onChange={(e) => handleChangeSkartLinkSarza(index, 'skart', e.target.value)}
-                                    placeholder="Skart"
+                                    placeholder="Škart komada"
                                     min={1}
                                     max={5000}
                                     className="skart-bk"
@@ -241,24 +223,22 @@ const CreateSkart = () => {
                         )}
                     </div>
 
-                    {/*<button type="submit" disabled={!isFormValid()} className="skart-save-btn">*/}
-                    {/*    Unos Škarta*/}
-                    {/*</button>*/}
                     <div className="sarza-submit">
                         <button type="submit" disabled={formErrors.length > 0} className="skart-submit-btn">
                             Unesi Škart
                         </button>
                     </div>
-                        {/* Error Messages */}
-                        {formErrors.length > 0 && (
-                            <ul className="error-messages">
-                                {formErrors.map((error, index) => (
-                                    <li key={index} className="error-message">
-                                        {error}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+
+                    {/* Error Messages */}
+                    {formErrors.length > 0 && (
+                        <ul className="error-messages">
+                            {formErrors.map((error, index) => (
+                                <li key={index} className="error-message">
+                                    {error}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
 
                 </form>
             </div>

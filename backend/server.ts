@@ -656,6 +656,16 @@ app.post('/api/skarts', async (req, res) => {
                 JSON.stringify(currentRemainingAlat),
                 sarzaData.linked_nalog,
             ]);
+            const totalSkart = currentSkart.reduce(
+                (sum: number, item: { skart: string }) => sum + parseInt(item.skart, 10),
+                0
+            );
+
+            // Update total_skart
+            await connection.query('UPDATE sarzas SET total_skart = ? WHERE id = ?', [
+                totalSkart,
+                linkedSarza,
+            ]);
         }
 
         await connection.commit();

@@ -165,6 +165,7 @@ const CreateNalog: React.FC = () => {
                         <label className="nalog-label">Opis:</label>
                         <input
                             type="text"
+                            placeholder={"Opcionalno"}
                             value={formData.opis || ''}
                             onChange={(e) => setFormData({ ...formData, opis: e.target.value })}
                             className="broj-naloga-input"

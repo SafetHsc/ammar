@@ -95,7 +95,7 @@ const KompletirajNalog: React.FC = () => {
     };
 
     return (
-        <div className="kompletiraj-sarzu" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="view-nalogs">
             <h2 className="sarza-h2">Kompletiraj Naloge</h2>
             <div className="sarza-nazad" style={{ marginBottom: '20px' }}>
                 <Link to="/nalozi-sarze">Nazad</Link>
@@ -146,10 +146,11 @@ const KompletirajNalog: React.FC = () => {
                                 <button
                                     style={{
                                         padding: '5px 10px',
-                                        backgroundColor: '#4CAF50',
+                                        backgroundColor: '#007bff',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '4px',
+                                        cursor: 'pointer',
                                     }}
                                     onClick={() => handleComplete(nalog.id, nalog.remaining_broj_komada_alat)}
                                 >

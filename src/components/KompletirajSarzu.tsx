@@ -59,27 +59,36 @@ const KompletirajSarzu: React.FC = () => {
     };
 
     // Function to handle "Kompletiraj" button click
-    const handleComplete = async (id: number) => {
+    const handleComplete = async (id: number, totalSkart: number) => {
+        if (totalSkart === 0) {
+            const confirmComplete = window.confirm(
+                'Za ovu šaržu nije unešen škart. Da li ste sigurni da želite kompletirati ovu šaržu?'
+            );
+            if (!confirmComplete) {
+                return; // Exit if user cancels
+            }
+        }
+
         try {
             const response = await fetch(`/api/sarzas/${id}/complete`, {
                 method: 'PUT',
             });
 
             if (response.ok) {
-                alert('Sarza marked as completed!');
+                alert('Šarža je uspješno kompletirana!');
                 // Remove the completed sarza from the list without refreshing the page
                 setSarzas(sarzas.filter(sarza => sarza.id !== id));
             } else {
-                alert('Error completing sarza');
+                alert('Greška pri kompletiranju šarže');
             }
         } catch (error) {
-            console.error('Error completing sarza:', error);
-            alert('Error completing sarza');
+            console.error('Greška pri kompletiranju šarže:', error);
+            alert('Greška pri kompletiranju šarže');
         }
     };
 
     return (
-        <div className="kompletiraj-sarzu" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="view-nalogs">
             <h2 className="sarza-h2">Kompletiraj Šarže</h2>
             <div className="sarza-nazad" style={{ marginBottom: '20px' }}>
                 <Link to="/nalozi-sarze">Nazad</Link>
@@ -91,6 +100,7 @@ const KompletirajSarzu: React.FC = () => {
                     <tr>
                         <th>ID</th>
                         <th>Nalog ID</th>
+                        <th>Broj Komada + Alat</th>
                         <th>Ukupan Broj Komada</th>
                         <th>Ukupan Škart</th>
                         <th>Kreirano</th>
@@ -102,6 +112,16 @@ const KompletirajSarzu: React.FC = () => {
                         <tr key={sarza.id}>
                             <td>{sarza.id}</td>
                             <td>{sarza.nalog_id}</td>
+                            <td>
+                                {sarza.broj_komada_alat
+                                    ? JSON.parse(sarza.broj_komada_alat)
+                                        .map(
+                                            (item: { alat: string; broj_komada: string }) =>
+                                                `${item.broj_komada} ${item.alat}`
+                                        )
+                                        .join('; ')
+                                    : '-'}
+                            </td>
                             <td>{sarza.total_br_kmd}</td>
                             <td>{sarza.total_skart}</td>
                             <td>{new Date(sarza.created_at).toLocaleString()}</td>
@@ -109,12 +129,13 @@ const KompletirajSarzu: React.FC = () => {
                                 <button
                                     style={{
                                         padding: '5px 10px',
-                                        backgroundColor: '#4CAF50',
+                                        backgroundColor: '#007bff',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '4px',
+                                        cursor: 'pointer',
                                     }}
-                                    onClick={() => handleComplete(sarza.id)}
+                                    onClick={() => handleComplete(sarza.id, sarza.total_skart)}
                                 >
                                     Kompletiraj
                                 </button>
@@ -126,11 +147,11 @@ const KompletirajSarzu: React.FC = () => {
             </div>
 
             {/* Pagination Controls */}
-            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{marginTop: '10px', display: 'flex', justifyContent: 'center'}}>
                 <button
                     onClick={handlePreviousPage}
                     disabled={currentPage === 1}
-                    style={{ marginRight: '10px', padding: '5px 10px' }}
+                    style={{marginRight: '10px', padding: '5px 10px'}}
                 >
                     Prethodna
                 </button>

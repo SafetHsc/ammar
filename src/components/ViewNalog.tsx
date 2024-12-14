@@ -15,7 +15,7 @@ interface Nalog {
     sarze: string;
 }
 
-const ViewNalogs: React.FC = () => {
+const ViewNalog: React.FC = () => {
     const [nalogs, setNalogs] = useState<Nalog[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -245,4 +245,4 @@ const ViewNalogs: React.FC = () => {
     );
 };
 
-export default ViewNalogs;
+export default ViewNalog;
