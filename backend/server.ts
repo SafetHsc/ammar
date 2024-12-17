@@ -584,7 +584,7 @@ app.post('/api/sarzas', async (req, res) => {
                 nalog_id,
             ]
         );
-
+        // Add šarža to heater_log table
         const insertLogQuery = `
             INSERT INTO heater_log (sarza_id, kada_id, elGrijac_duration, ventil_duration, last_updated)
             VALUES (?, ?, 0, 0, NOW())
