@@ -143,7 +143,7 @@ app.get('/api/arduino-data', (_req, res) => {
     });
 });
 
-// Endpoint to fetch temperature data for cards
+// Endpoint to fetch temperature data for all cards
 app.get('/api/cards', async (_req, res) => {
     const query = 'SELECT id, cardName, topTemperature, currentTemperature, bottomTemperature, elGrijac, ventil FROM cards';
 
@@ -156,7 +156,7 @@ app.get('/api/cards', async (_req, res) => {
     }
 });
 
-// Endpoint to fetch temperature data for a specific card by ID
+// Endpoint to fetch temperature data for a specific kada by ID
 app.get('/api/cards/:id', async (req, res) => {
     const { id } = req.params; // Get the card ID from the request parameters
     const query = 'SELECT id, cardName, topTemperature, currentTemperature, bottomTemperature, elGrijac, ventil FROM cards WHERE id = ?';
@@ -175,7 +175,7 @@ app.get('/api/cards/:id', async (req, res) => {
     }
 });
 
-// Endpoint to set temperature data for a specific card by ID
+// Endpoint to set temperature data for a specific kada by ID
 app.post('/api/cards/:id', async (req, res) => {
     const { id } = req.params;
     const { topTemperature, currentTemperature, bottomTemperature, elGrijac, ventil } = req.body; // Include setTemperature in request body
@@ -220,7 +220,6 @@ app.post('/api/users', async (req, res) => {
 });
 
 // @ts-ignore
-
 app.post('/api/del-users', async (req, res) => {
     const { username } = req.body;
 
@@ -257,7 +256,6 @@ app.post('/api/del-users', async (req, res) => {
     }
 });
 
-// Endpoint to fetch user data (credentials able to log in)
 app.get('/api/users', async (_req, res) => {
     const query = 'SELECT id, username, password FROM users';
 
@@ -270,7 +268,6 @@ app.get('/api/users', async (_req, res) => {
     }
 });
 
-// Endpoint for user login attempt (check if account exists in database)
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -500,7 +497,6 @@ type SkartItem = { skart: string; alat: string; linkedSarza?: number };
 type QueryResultWithInsertId = { insertId: number; affectedRows: number };
 type Nalog = { remaining_broj_komada_alat: string };
 
-// POST /api/sarzas
 // @ts-ignore
 app.post('/api/sarzas', async (req, res) => {
     const { nalog_id, broj_komada_alat, kada_id }: {
@@ -589,6 +585,13 @@ app.post('/api/sarzas', async (req, res) => {
             ]
         );
 
+        const insertLogQuery = `
+            INSERT INTO heater_log (sarza_id, kada_id, elGrijac_duration, ventil_duration, last_updated)
+            VALUES (?, ?, 0, 0, NOW())
+            `;
+        await connection.execute(insertLogQuery, [result.insertId, kada_id]);
+        console.log(`Heater log created for Sarza ID ${result.insertId}, Kada ID ${kada_id}`);
+
         await connection.commit();
         res.json({ message: 'Šarza Uspješno Kreirana: ', id: result.insertId });
     } catch (error) {
@@ -600,6 +603,150 @@ app.post('/api/sarzas', async (req, res) => {
     }
 });
 
+interface ActiveHeaterState {
+    sarza_id: number;
+    kada_id: number;
+    elGrijac: number;
+    ventil: number;
+    elGrijacStartTime?: number; // Timestamp when elGrijac turned ON
+    ventilStartTime?: number;   // Timestamp when ventil turned ON
+    elGrijacDuration: number;   // Total duration for elGrijac for this sarza
+    ventilDuration: number;     // Total duration for ventil for this sarza
+}
+
+const activeHeaters: Map<string, ActiveHeaterState> = new Map(); // Tracks active sarzas and kada combinations
+
+// Function to track heater states and track durations
+async function trackHeaterStates() {
+    try {
+        const currentTime = Date.now();
+        const logPromises: Promise<void>[] = [];  // Array to collect all log promises
+
+        // Fetch active sarzas and their kada_ids
+        const [activeSarzas] = await db.execute(`
+            SELECT s.id AS sarza_id, s.kada_id, c.elGrijac, c.ventil
+            FROM sarzas s
+            JOIN cards c ON s.kada_id = c.id
+            WHERE s.completed = 0
+        `) as [any[], any];
+
+        console.log('Active Sarzas:', activeSarzas); // Debugging: show active sarzas
+
+        // Track new sarzas or update states
+        for (const sarza of activeSarzas) {
+            const { sarza_id, kada_id, elGrijac, ventil } = sarza;
+            const key = `${sarza_id}-${kada_id}`; // Unique key for sarza_id and kada_id combination
+
+            let heaterState = activeHeaters.get(key);
+
+            // Initialize if the kada_id is not already tracked
+            if (!heaterState) {
+                console.log(`Initializing tracking for kada_id: ${kada_id} (Sarza: ${sarza_id})`);
+
+                heaterState = {
+                    sarza_id,
+                    kada_id,
+                    elGrijac,
+                    ventil,
+                    elGrijacStartTime: elGrijac === 1 ? currentTime : undefined,
+                    ventilStartTime: ventil === 1 ? currentTime : undefined,
+                    elGrijacDuration: 0,
+                    ventilDuration: 0
+                };
+
+                activeHeaters.set(key, heaterState);
+                if (elGrijac === 1) console.log(`Starting elGrijac timer for kada_id: ${kada_id}`);
+                if (ventil === 1) console.log(`Starting ventil timer for kada_id: ${kada_id}`);
+            } else if (heaterState.sarza_id !== sarza_id) {
+                // If sarza_id has changed (new sarza using the same kada_id), reset the tracking for this kada
+                console.log(`Updating tracking for kada_id: ${kada_id} (New Sarza: ${sarza_id})`);
+
+                // Log the duration for the previous sarza before updating
+                if (heaterState.elGrijacStartTime) {
+                    const elGrijacDuration = Math.floor((currentTime - heaterState.elGrijacStartTime) / 1000);
+                    heaterState.elGrijacDuration += elGrijacDuration;
+                    logPromises.push(logDuration(heaterState.sarza_id, 'elGrijac_duration', elGrijacDuration));
+                }
+                if (heaterState.ventilStartTime) {
+                    const ventilDuration = Math.floor((currentTime - heaterState.ventilStartTime) / 1000);
+                    heaterState.ventilDuration += ventilDuration;
+                    logPromises.push(logDuration(heaterState.sarza_id, 'ventil_duration', ventilDuration));
+                }
+
+                // Reinitialize the heater state for the new sarza
+                heaterState.sarza_id = sarza_id;
+                heaterState.elGrijacStartTime = elGrijac === 1 ? currentTime : undefined;
+                heaterState.ventilStartTime = ventil === 1 ? currentTime : undefined;
+
+                if (elGrijac === 1) {
+                    console.log(`Starting elGrijac timer for kada_id: ${kada_id}`);
+                }
+                if (ventil === 1) {
+                    console.log(`Starting ventil timer for kada_id: ${kada_id}`);
+                }
+            }
+
+            // Track elGrijac duration
+            if (elGrijac === 1 && !heaterState.elGrijacStartTime) {
+                heaterState.elGrijacStartTime = currentTime; // Start timer if it was off before
+                console.log(`elGrijac turned ON for kada_id: ${kada_id}`);
+            } else if (elGrijac === 0 && heaterState.elGrijacStartTime) {
+                const duration = Math.floor((currentTime - heaterState.elGrijacStartTime) / 1000);
+                heaterState.elGrijacDuration += duration;
+                logPromises.push(logDuration(sarza_id, 'elGrijac_duration', duration));
+                heaterState.elGrijacStartTime = undefined; // Reset timer when it turns off
+                console.log(`elGrijac turned OFF for kada_id: ${kada_id}, duration: ${duration}s`);
+            }
+
+            // Track ventil duration
+            if (ventil === 1 && !heaterState.ventilStartTime) {
+                heaterState.ventilStartTime = currentTime; // Start timer if it was off before
+                console.log(`Ventil turned ON for kada_id: ${kada_id}`);
+            } else if (ventil === 0 && heaterState.ventilStartTime) {
+                const duration = Math.floor((currentTime - heaterState.ventilStartTime) / 1000);
+                heaterState.ventilDuration += duration;
+                logPromises.push(logDuration(sarza_id, 'ventil_duration', duration));
+                heaterState.ventilStartTime = undefined; // Reset timer when it turns off
+                console.log(`Ventil turned OFF for kada_id: ${kada_id}, duration: ${duration}s`);
+            }
+        }
+
+        // Cleanup: remove completed sarzas from activeHeaters
+        const [completedSarzas] = await db.execute(`
+            SELECT id, kada_id FROM sarzas WHERE completed = 1
+        `) as [any[], any];
+
+        // Remove completed sarzas from active heaters
+        for (const sarza of completedSarzas) {
+            const key = `${sarza.id}-${sarza.kada_id}`;
+            if (activeHeaters.has(key)) {
+                activeHeaters.delete(key);
+                console.log(`Stopped tracking for completed Sarza ID ${sarza.id}`);
+            }
+        }
+
+        // Wait for all logDuration operations to complete
+        await Promise.all(logPromises);  // Executes all the logDuration functions in parallel
+
+    } catch (error) {
+        console.error('Error tracking heater states:', (error as Error).message);
+    }
+}
+
+// Function to log the duration of the heater states
+async function logDuration(sarza_id: number, column: string, duration: number) {
+    const updateQuery = `
+        UPDATE heater_log
+        SET ${column} = ${column} + ?, last_updated = NOW()
+        WHERE sarza_id = ?
+    `;
+    await db.execute(updateQuery, [duration, sarza_id]);
+    console.log(`Logged ${duration} seconds to ${column} for Sarza ID ${sarza_id}`);
+}
+
+// Start the tracking process
+setInterval(trackHeaterStates, 1000); // Poll every second
+console.log('Heater state tracking started...');
 
 app.post('/api/skarts', async (req, res) => {
     const { skart }: { skart: SkartItem[] } = req.body;
@@ -733,8 +880,6 @@ app.get('/api/nalogs/:id/sarzas', async (req, res) => {
     }
 });
 
-
-// Fetch nalogs with related sarzas
 app.get('/api/nalogs', async (_req, res) => {
     try {
         const query = `SELECT * from nalogs`;
