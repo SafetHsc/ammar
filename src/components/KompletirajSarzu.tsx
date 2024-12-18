@@ -12,6 +12,7 @@ interface Sarza {
     completed: number;
     created_at: string;
     completed_at: string | null;
+    removed_at: string | null; // Added for clarity
 }
 
 const KompletirajSarzu: React.FC = () => {
@@ -28,7 +29,6 @@ const KompletirajSarzu: React.FC = () => {
                 const response = await fetch('/api/sarzas'); // Your backend endpoint for all sarzas
                 if (!response.ok) throw new Error('Failed to fetch sarzas');
                 const data: Sarza[] = await response.json();
-                // Filter out only incomplete sarzas (completed = 0)
                 const incompleteSarzas = data.filter(sarza => sarza.completed === 0);
                 setSarzas(incompleteSarzas);
             } catch (err: any) {
@@ -44,7 +44,6 @@ const KompletirajSarzu: React.FC = () => {
     if (loading) return <p>Učitavanje šarži...</p>;
     if (error) return <p>Error: {error}</p>;
 
-    // Pagination logic
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentSarzas = sarzas.slice(indexOfFirstItem, indexOfLastItem);
@@ -58,14 +57,13 @@ const KompletirajSarzu: React.FC = () => {
         if (currentPage < totalPages) setCurrentPage(currentPage + 1);
     };
 
-    // Function to handle "Kompletiraj" button click
     const handleComplete = async (id: number, totalSkart: number) => {
         if (totalSkart === 0) {
             const confirmComplete = window.confirm(
                 'Za ovu šaržu nije unešen škart. Da li ste sigurni da želite kompletirati ovu šaržu?'
             );
             if (!confirmComplete) {
-                return; // Exit if user cancels
+                return;
             }
         }
 
@@ -76,7 +74,6 @@ const KompletirajSarzu: React.FC = () => {
 
             if (response.ok) {
                 alert('Šarža je uspješno kompletirana!');
-                // Remove the completed sarza from the list without refreshing the page
                 setSarzas(sarzas.filter(sarza => sarza.id !== id));
             } else {
                 alert('Greška pri kompletiranju šarže');
@@ -84,6 +81,34 @@ const KompletirajSarzu: React.FC = () => {
         } catch (error) {
             console.error('Greška pri kompletiranju šarže:', error);
             alert('Greška pri kompletiranju šarže');
+        }
+    };
+
+    const handleRemoveFromKada = async (id: number) => {
+        const confirmRemove = window.confirm(
+            'Da li ste sigurni da želite označiti šaržu kao uklonjenu iz kade?'
+        );
+
+        if (!confirmRemove) return;
+
+        try {
+            const response = await fetch(`/api/sarzas/${id}/remove`, {
+                method: 'PUT',
+            });
+
+            if (response.ok) {
+                alert('Šarža je uspješno označena kao uklonjena iz kade!');
+                setSarzas(prevSarzas =>
+                    prevSarzas.map(sarza =>
+                        sarza.id === id ? { ...sarza, removed_at: new Date().toISOString() } : sarza
+                    )
+                );
+            } else {
+                alert('Greška pri označavanju šarže kao uklonjene');
+            }
+        } catch (error) {
+            console.error('Greška pri označavanju šarže kao uklonjene:', error);
+            alert('Greška pri označavanju šarže kao uklonjene');
         }
     };
 
@@ -108,7 +133,7 @@ const KompletirajSarzu: React.FC = () => {
                     </tr>
                     </thead>
                     <tbody>
-                    {currentSarzas.map((sarza) => (
+                    {currentSarzas.map(sarza => (
                         <tr key={sarza.id}>
                             <td>{sarza.id}</td>
                             <td>{sarza.nalog_id}</td>
@@ -134,11 +159,27 @@ const KompletirajSarzu: React.FC = () => {
                                         border: 'none',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
+                                        marginRight: '5px',
                                     }}
                                     onClick={() => handleComplete(sarza.id, sarza.total_skart)}
                                 >
                                     Kompletiraj
                                 </button>
+                                {sarza.removed_at === null && (
+                                    <button
+                                        style={{
+                                            padding: '5px 10px',
+                                            backgroundColor: '#28a745',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                        }}
+                                        onClick={() => handleRemoveFromKada(sarza.id)}
+                                    >
+                                        Ukloni iz Kade
+                                    </button>
+                                )}
                             </td>
                         </tr>
                     ))}
@@ -146,12 +187,11 @@ const KompletirajSarzu: React.FC = () => {
                 </table>
             </div>
 
-            {/* Pagination Controls */}
-            <div style={{marginTop: '10px', display: 'flex', justifyContent: 'center'}}>
+            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'center' }}>
                 <button
                     onClick={handlePreviousPage}
                     disabled={currentPage === 1}
-                    style={{marginRight: '10px', padding: '5px 10px'}}
+                    style={{ marginRight: '10px', padding: '5px 10px' }}
                 >
                     Prethodna
                 </button>

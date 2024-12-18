@@ -585,11 +585,11 @@ app.post('/api/sarzas', async (req, res) => {
             ]
         );
         // Add šarža to heater_log table
-        const insertLogQuery = `
-            INSERT INTO heater_log (sarza_id, kada_id, elGrijac_duration, ventil_duration, last_updated)
-            VALUES (?, ?, 0, 0, NOW())
-            `;
-        await connection.execute(insertLogQuery, [result.insertId, kada_id]);
+        // const insertLogQuery = `
+        //     INSERT INTO heater_log (sarza_id, kada_id, elGrijac_duration, ventil_duration, last_updated)
+        //     VALUES (?, ?, 0, 0, NOW())
+        //     `;
+        // await connection.execute(insertLogQuery, [result.insertId, kada_id]);
 
         await connection.commit();
         res.json({ message: 'Šarza Uspješno Kreirana: ', id: result.insertId });
@@ -601,143 +601,6 @@ app.post('/api/sarzas', async (req, res) => {
         connection.release();
     }
 });
-
-interface ActiveHeaterState {
-    sarza_id: number;
-    kada_id: number;
-    elGrijac: number;
-    ventil: number;
-    elGrijacStartTime?: number; // Timestamp when elGrijac turned ON
-    ventilStartTime?: number;   // Timestamp when ventil turned ON
-    elGrijacDuration: number;   // Total duration for elGrijac for this sarza
-    ventilDuration: number;     // Total duration for ventil for this sarza
-}
-
-const activeHeaters: Map<string, ActiveHeaterState> = new Map(); // Tracks active sarzas and kada combinations
-
-// Function to track heater states and track durations
-async function trackHeaterStates() {
-    try {
-        const currentTime = Date.now();
-        const logPromises: Promise<void>[] = [];  // Array to collect all log promises
-
-        // Fetch active sarzas and their kada_ids
-        const [activeSarzas] = await db.execute(`
-            SELECT s.id AS sarza_id, s.kada_id, c.elGrijac, c.ventil
-            FROM sarzas s
-            JOIN cards c ON s.kada_id = c.id
-            WHERE s.completed = 0
-        `) as [any[], any];
-
-        // Track new sarzas or update states
-        for (const sarza of activeSarzas) {
-            const { sarza_id, kada_id, elGrijac, ventil } = sarza;
-            const key = `${sarza_id}-${kada_id}`; // Unique key for sarza_id and kada_id combination
-
-            let heaterState = activeHeaters.get(key);
-
-            // Initialize if the kada_id is not already tracked
-            if (!heaterState) {
-
-                heaterState = {
-                    sarza_id,
-                    kada_id,
-                    elGrijac,
-                    ventil,
-                    elGrijacStartTime: elGrijac === 1 ? currentTime : undefined,
-                    ventilStartTime: ventil === 1 ? currentTime : undefined,
-                    elGrijacDuration: 0,
-                    ventilDuration: 0
-                };
-
-                activeHeaters.set(key, heaterState);
-                // if (elGrijac === 1) {
-                //     console.log(`Starting elGrijac timer for kada_id: ${kada_id}`);
-                // }
-                // if (ventil === 1) {
-                //     console.log(`Starting ventil timer for kada_id: ${kada_id}`);
-                // }
-            } else if (heaterState.sarza_id !== sarza_id) {
-
-                // Log the duration for the previous sarza before updating
-                if (heaterState.elGrijacStartTime) {
-                    const elGrijacDuration = Math.floor((currentTime - heaterState.elGrijacStartTime) / 1000);
-                    heaterState.elGrijacDuration += elGrijacDuration;
-                    logPromises.push(logDuration(heaterState.sarza_id, 'elGrijac_duration', elGrijacDuration));
-                }
-                if (heaterState.ventilStartTime) {
-                    const ventilDuration = Math.floor((currentTime - heaterState.ventilStartTime) / 1000);
-                    heaterState.ventilDuration += ventilDuration;
-                    logPromises.push(logDuration(heaterState.sarza_id, 'ventil_duration', ventilDuration));
-                }
-
-                // Reinitialize the heater state for the new sarza
-                heaterState.sarza_id = sarza_id;
-                heaterState.elGrijacStartTime = elGrijac === 1 ? currentTime : undefined;
-                heaterState.ventilStartTime = ventil === 1 ? currentTime : undefined;
-
-                // if (elGrijac === 1) {
-                //     console.log(`Starting elGrijac timer for kada_id: ${kada_id}`);
-                // }
-                // if (ventil === 1) {
-                //     console.log(`Starting ventil timer for kada_id: ${kada_id}`);
-                // }
-            }
-
-            // Track elGrijac duration
-            if (elGrijac === 1 && !heaterState.elGrijacStartTime) {
-                heaterState.elGrijacStartTime = currentTime; // Start timer if it was off before
-            } else if (elGrijac === 0 && heaterState.elGrijacStartTime) {
-                const duration = Math.floor((currentTime - heaterState.elGrijacStartTime) / 1000);
-                heaterState.elGrijacDuration += duration;
-                logPromises.push(logDuration(sarza_id, 'elGrijac_duration', duration));
-                heaterState.elGrijacStartTime = undefined; // Reset timer when it turns off
-            }
-
-            // Track ventil duration
-            if (ventil === 1 && !heaterState.ventilStartTime) {
-                heaterState.ventilStartTime = currentTime; // Start timer if it was off before
-            } else if (ventil === 0 && heaterState.ventilStartTime) {
-                const duration = Math.floor((currentTime - heaterState.ventilStartTime) / 1000);
-                heaterState.ventilDuration += duration;
-                logPromises.push(logDuration(sarza_id, 'ventil_duration', duration));
-                heaterState.ventilStartTime = undefined; // Reset timer when it turns off
-            }
-        }
-
-        // Cleanup: remove completed sarzas from activeHeaters
-        const [completedSarzas] = await db.execute(`
-            SELECT id, kada_id FROM sarzas WHERE completed = 1
-        `) as [any[], any];
-
-        // Remove completed sarzas from active heaters
-        for (const sarza of completedSarzas) {
-            const key = `${sarza.id}-${sarza.kada_id}`;
-            if (activeHeaters.has(key)) {
-                activeHeaters.delete(key);
-            }
-        }
-
-        // Wait for all logDuration operations to complete
-        await Promise.all(logPromises);  // Executes all the logDuration functions in parallel
-
-    } catch (error) {
-        console.error('Error tracking heater states:', (error as Error).message);
-    }
-}
-
-// Function to log the duration of the heater states
-async function logDuration(sarza_id: number, column: string, duration: number) {
-    const updateQuery = `
-        UPDATE heater_log
-        SET ${column} = ${column} + ?, last_updated = NOW()
-        WHERE sarza_id = ?
-    `;
-    await db.execute(updateQuery, [duration, sarza_id]);
-}
-
-// Start the tracking process
-setInterval(trackHeaterStates, 1000); // Poll every second
 
 // Global heater timers - grijaci_dnevno
 interface HeaterState {
@@ -1078,27 +941,122 @@ app.get('/api/sarzas/view', async (_req, res) => {
 });
 
 // @ts-ignore
-app.put('/api/sarzas/:id/complete', async (req, res) => {
-    const { id } = req.params;  // Get the sarza ID from the route parameter
-    try {
-        // Update query
-        const query = `UPDATE sarzas SET completed = 1, completed_at = NOW() WHERE id = ?`;
+app.put('/api/sarzas/:id/remove', async (req, res) => {
+    const { id } = req.params;
 
-        // Execute the query and properly type the result
+    try {
+        const query = `
+            UPDATE sarzas 
+            SET removed_at = NOW() 
+            WHERE id = ?
+        `;
         const [result]: [ResultSetHeader, FieldPacket[]] = await db.execute(query, [id]);
 
-        // Check the `affectedRows` property
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Sarza not found' });
         }
 
-        // Respond with success
-        res.json({ message: 'Sarza completed successfully' });
+        res.json({ message: 'Sarza removal timestamp updated successfully' });
     } catch (error) {
-        console.error('Error updating sarza:', error);
-        res.status(500).json({ message: 'Error updating sarza' });
+        console.error('Error updating removal timestamp:', error);
+        res.status(500).json({ message: 'Error updating sarza removal timestamp' });
     }
 });
+
+// @ts-ignore
+app.put('/api/sarzas/:id/complete', async (req, res) => {
+    const { id } = req.params;  // Get the sarza ID from the route parameter
+    try {
+        // Step 1: Update the sarza completion status and set the completed_at time
+        const updateSarzaQuery = `
+            UPDATE sarzas 
+            SET completed = 1, completed_at = NOW() 
+            WHERE id = ?
+        `;
+        const [updateResult]: [ResultSetHeader, FieldPacket[]] = await db.execute(updateSarzaQuery, [id]);
+
+        // Step 2: If no rows were affected, return an error
+        if (updateResult.affectedRows === 0) {
+            return res.status(404).json({ message: 'Sarza not found' });
+        }
+
+        // Step 3: Fetch the created_at and completed_at for the sarza
+        const fetchSarzaQuery = `
+            SELECT created_at, completed_at, kada_id 
+            FROM sarzas 
+            WHERE id = ?
+        `;
+        const [sarzaData]: [RowDataPacket[], FieldPacket[]] = await db.execute(fetchSarzaQuery, [id]);
+
+        if (!sarzaData || sarzaData.length === 0) {
+            return res.status(404).json({ message: 'Sarza data not found' });
+        }
+
+        const { created_at, completed_at, kada_id } = sarzaData[0];
+
+        // Check if completed_at is null and handle accordingly
+        const completedAtDate = completed_at ? new Date(completed_at) : new Date(); // Use current date if completed_at is null
+
+        // Step 4: Calculate elGrijac and ventil durations based on grijaci_dnevno data
+        const fetchHeaterLogsQuery = `
+            SELECT heater_type, state_change_on, state_change_off 
+            FROM grijaci_dnevno
+            WHERE kada_id = ?
+            AND (
+                (state_change_on BETWEEN ? AND ?)
+                OR (state_change_off BETWEEN ? AND ?)
+                OR (state_change_on < ? AND (state_change_off IS NULL OR state_change_off > ?))
+            )
+        `;
+        const [heaterLogs]: [RowDataPacket[], FieldPacket[]] = await db.execute(fetchHeaterLogsQuery, [
+            kada_id,
+            created_at,
+            completed_at,
+            created_at,
+            completed_at,
+            created_at,
+            completed_at,
+        ]);
+
+        // Step 5: Calculate the durations for each heater type (elGrijac, ventil)
+        let elGrijac_duration = 0;
+        let ventil_duration = 0;
+
+        // Correctly iterate through the heaterLogs array
+        heaterLogs.forEach((log: RowDataPacket) => {
+            const { heater_type, state_change_on, state_change_off } = log;
+            const removalTime = sarzaData[0].removed_at ? new Date(sarzaData[0].removed_at) : completedAtDate;
+            let start_time = new Date(state_change_on);
+            let end_time = state_change_off ? new Date(state_change_off) : removalTime;
+
+            if (start_time < new Date(created_at)) start_time = new Date(created_at);
+            if (end_time > removalTime) end_time = removalTime;
+
+            const duration = (end_time.getTime() - start_time.getTime()) / 1000; // duration in seconds
+
+            if (heater_type === 'elGrijac') {
+                elGrijac_duration += Math.max(0, duration);
+            } else if (heater_type === 'ventil') {
+                ventil_duration += Math.max(0, duration);
+            }
+        });
+
+        // Step 6: Insert the calculated durations into the heater_log table
+        const insertLogQuery = `
+            INSERT INTO heater_log (sarza_id, kada_id, elGrijac_duration, ventil_duration, last_updated)
+            VALUES (?, ?, ?, ?, NOW())
+        `;
+        await db.execute(insertLogQuery, [id, kada_id, elGrijac_duration, ventil_duration]);
+
+        // Step 7: Respond with success
+        res.json({ message: 'Sarza completed successfully' });
+    } catch (error) {
+        console.error('Error completing sarza:', error);
+        res.status(500).json({ message: 'Error completing sarza' });
+    }
+});
+
+
 
 // @ts-ignore
 app.put('/api/nalogs/:id/complete', async (req, res) => {
