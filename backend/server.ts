@@ -590,7 +590,6 @@ app.post('/api/sarzas', async (req, res) => {
             VALUES (?, ?, 0, 0, NOW())
             `;
         await connection.execute(insertLogQuery, [result.insertId, kada_id]);
-        console.log(`Heater log created for Sarza ID ${result.insertId}, Kada ID ${kada_id}`);
 
         await connection.commit();
         res.json({ message: 'Šarza Uspješno Kreirana: ', id: result.insertId });
@@ -630,8 +629,6 @@ async function trackHeaterStates() {
             WHERE s.completed = 0
         `) as [any[], any];
 
-        console.log('Active Sarzas:', activeSarzas); // Debugging: show active sarzas
-
         // Track new sarzas or update states
         for (const sarza of activeSarzas) {
             const { sarza_id, kada_id, elGrijac, ventil } = sarza;
@@ -641,7 +638,6 @@ async function trackHeaterStates() {
 
             // Initialize if the kada_id is not already tracked
             if (!heaterState) {
-                console.log(`Initializing tracking for kada_id: ${kada_id} (Sarza: ${sarza_id})`);
 
                 heaterState = {
                     sarza_id,
@@ -655,11 +651,13 @@ async function trackHeaterStates() {
                 };
 
                 activeHeaters.set(key, heaterState);
-                if (elGrijac === 1) console.log(`Starting elGrijac timer for kada_id: ${kada_id}`);
-                if (ventil === 1) console.log(`Starting ventil timer for kada_id: ${kada_id}`);
+                // if (elGrijac === 1) {
+                //     console.log(`Starting elGrijac timer for kada_id: ${kada_id}`);
+                // }
+                // if (ventil === 1) {
+                //     console.log(`Starting ventil timer for kada_id: ${kada_id}`);
+                // }
             } else if (heaterState.sarza_id !== sarza_id) {
-                // If sarza_id has changed (new sarza using the same kada_id), reset the tracking for this kada
-                console.log(`Updating tracking for kada_id: ${kada_id} (New Sarza: ${sarza_id})`);
 
                 // Log the duration for the previous sarza before updating
                 if (heaterState.elGrijacStartTime) {
@@ -678,36 +676,32 @@ async function trackHeaterStates() {
                 heaterState.elGrijacStartTime = elGrijac === 1 ? currentTime : undefined;
                 heaterState.ventilStartTime = ventil === 1 ? currentTime : undefined;
 
-                if (elGrijac === 1) {
-                    console.log(`Starting elGrijac timer for kada_id: ${kada_id}`);
-                }
-                if (ventil === 1) {
-                    console.log(`Starting ventil timer for kada_id: ${kada_id}`);
-                }
+                // if (elGrijac === 1) {
+                //     console.log(`Starting elGrijac timer for kada_id: ${kada_id}`);
+                // }
+                // if (ventil === 1) {
+                //     console.log(`Starting ventil timer for kada_id: ${kada_id}`);
+                // }
             }
 
             // Track elGrijac duration
             if (elGrijac === 1 && !heaterState.elGrijacStartTime) {
                 heaterState.elGrijacStartTime = currentTime; // Start timer if it was off before
-                console.log(`elGrijac turned ON for kada_id: ${kada_id}`);
             } else if (elGrijac === 0 && heaterState.elGrijacStartTime) {
                 const duration = Math.floor((currentTime - heaterState.elGrijacStartTime) / 1000);
                 heaterState.elGrijacDuration += duration;
                 logPromises.push(logDuration(sarza_id, 'elGrijac_duration', duration));
                 heaterState.elGrijacStartTime = undefined; // Reset timer when it turns off
-                console.log(`elGrijac turned OFF for kada_id: ${kada_id}, duration: ${duration}s`);
             }
 
             // Track ventil duration
             if (ventil === 1 && !heaterState.ventilStartTime) {
                 heaterState.ventilStartTime = currentTime; // Start timer if it was off before
-                console.log(`Ventil turned ON for kada_id: ${kada_id}`);
             } else if (ventil === 0 && heaterState.ventilStartTime) {
                 const duration = Math.floor((currentTime - heaterState.ventilStartTime) / 1000);
                 heaterState.ventilDuration += duration;
                 logPromises.push(logDuration(sarza_id, 'ventil_duration', duration));
                 heaterState.ventilStartTime = undefined; // Reset timer when it turns off
-                console.log(`Ventil turned OFF for kada_id: ${kada_id}, duration: ${duration}s`);
             }
         }
 
@@ -721,7 +715,6 @@ async function trackHeaterStates() {
             const key = `${sarza.id}-${sarza.kada_id}`;
             if (activeHeaters.has(key)) {
                 activeHeaters.delete(key);
-                console.log(`Stopped tracking for completed Sarza ID ${sarza.id}`);
             }
         }
 
@@ -741,12 +734,148 @@ async function logDuration(sarza_id: number, column: string, duration: number) {
         WHERE sarza_id = ?
     `;
     await db.execute(updateQuery, [duration, sarza_id]);
-    console.log(`Logged ${duration} seconds to ${column} for Sarza ID ${sarza_id}`);
 }
 
 // Start the tracking process
 setInterval(trackHeaterStates, 1000); // Poll every second
-console.log('Heater state tracking started...');
+
+// Global heater timers - grijaci_dnevno
+interface HeaterState {
+    kada_id: number;
+    heater_type: 'elGrijac' | 'ventil';
+    state: number; // 1 for ON, 0 for OFF
+    stateChangeStartTime?: number; // Timestamp when the heater turned ON
+}
+
+const activeHeaterStates: Map<string, HeaterState> = new Map();
+
+async function trackGlobalHeaterStates() {
+    try {
+        const currentTime = Date.now(); // Current timestamp in milliseconds
+
+        // Fetch all cards (kadas) and their current heater states
+        const [cards] = await db.execute(`
+            SELECT id AS kada_id, elGrijac, ventil
+            FROM cards
+        `) as [any[], any];
+
+        const logPromises: Promise<void>[] = []; // Array to hold promises for database updates
+
+        for (const card of cards) {
+            const { kada_id, elGrijac, ventil } = card;
+
+            // Track elGrijac state
+            logPromises.push(
+                handleHeaterStateChange(kada_id, 'elGrijac', elGrijac, currentTime)
+            );
+
+            // Track ventil state
+            logPromises.push(
+                handleHeaterStateChange(kada_id, 'ventil', ventil, currentTime)
+            );
+        }
+
+        // Wait for all logging operations to complete
+        await Promise.all(logPromises);
+
+    } catch (error) {
+        console.error('Error tracking global heater states:', (error as Error).message);
+    }
+}
+
+async function handleHeaterStateChange(
+    kada_id: number,
+    heater_type: 'elGrijac' | 'ventil',
+    current_state: number,
+    currentTime: number
+) {
+    const key = `${kada_id}-${heater_type}`; // Unique key for kada_id and heater_type
+    let heaterState = activeHeaterStates.get(key);
+
+    if (!heaterState) {
+        // If no tracking exists, initialize tracking
+        heaterState = {
+            kada_id,
+            heater_type,
+            state: current_state,
+            stateChangeStartTime: current_state === 1 ? currentTime : undefined,
+        };
+        activeHeaterStates.set(key, heaterState);
+
+        if (current_state === 1) {
+            await logStateChange(kada_id, heater_type, currentTime, null); // Log ON state
+        }
+    } else {
+        // Handle state change
+        if (heaterState.state !== current_state) {
+            if (current_state === 1) {
+                // Heater turned ON
+                heaterState.stateChangeStartTime = currentTime;
+                await logStateChange(kada_id, heater_type, currentTime, null);
+            } else if (current_state === 0 && heaterState.stateChangeStartTime) {
+                // Heater turned OFF, calculate duration
+                const duration = Math.floor((currentTime - heaterState.stateChangeStartTime) / 1000);
+
+                await logStateChange(
+                    kada_id,
+                    heater_type,
+                    heaterState.stateChangeStartTime,
+                    currentTime,
+                    duration
+                );
+
+                heaterState.stateChangeStartTime = undefined; // Reset the start time
+            }
+
+            // Update the current state
+            heaterState.state = current_state;
+        }
+    }
+}
+
+// Function to log state changes into the grijaci_dnevno table
+async function logStateChange(
+    kada_id: number,
+    heater_type: 'elGrijac' | 'ventil',
+    state_change_on: number,
+    state_change_off: number | null,
+    duration: number | null = null
+) {
+    if (state_change_off !== null) {
+        // Update the existing row with state_change_off and duration
+        const updateQuery = `
+            UPDATE grijaci_dnevno
+            SET state_change_off = FROM_UNIXTIME(?), duration_seconds = ?
+            WHERE kada_id = ? AND heater_type = ? AND state_change_off IS NULL
+        `;
+        await db.execute(updateQuery, [state_change_off / 1000, duration, kada_id, heater_type]);
+    } else {
+        // Insert a new row for state_change_on
+        const insertQuery = `
+            INSERT INTO grijaci_dnevno (kada_id, heater_type, state_change_on)
+            VALUES (?, ?, FROM_UNIXTIME(?))
+        `;
+        await db.execute(insertQuery, [kada_id, heater_type, state_change_on / 1000]);
+    }
+}
+
+setInterval(trackGlobalHeaterStates, 1000);
+
+app.get('/api/grijaci_dnevno', async (_req, res) => {
+    try {
+        // Query to fetch all records without any date filtering
+        const query = `
+            SELECT * FROM grijaci_dnevno`;
+
+        // Execute query
+        const [results] = await db.execute(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching heater state changes:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 
 app.post('/api/skarts', async (req, res) => {
     const { skart }: { skart: SkartItem[] } = req.body;

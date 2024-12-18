@@ -31,6 +31,9 @@ const NaloziSarze = () => {
                 <Link to="/kompletiraj-sarzu" style={styles.link}>
                     <button style={styles.button}>KOMPLETIRAJ ŠARŽU</button>
                 </Link>
+                <Link to="/vidi-grijace" style={styles.link}>
+                    <button style={styles.button}>PREGLED GRIJAČA</button>
+                </Link>
             </div>
         </div>
     );
