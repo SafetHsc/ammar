@@ -36,7 +36,7 @@ const Header: React.FC<{ isLoggedIn: boolean; role: number | null; onLogout: () 
     return (
         <header className="header">
             <div className="header-left">
-                <img src="src/assets/logo.png" alt="Company Logo" className="logo" />
+                <img src="../../public/logo.png" alt="Company Logo" className="logo" />
             </div>
             <div className="header-center">
                 <h2 className="clock">{currentTime}</h2>
