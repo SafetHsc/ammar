@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from "react-router-dom";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface HeaterLog {
     id: number;
@@ -84,6 +86,45 @@ const ViewHeaterLogs: React.FC = () => {
         }
     };
 
+    const generatePDF = () => {
+        const doc = new jsPDF();
+        const title = 'Izvjestaj Rada Grijaca';
+        const currentDate = new Date().toLocaleDateString();
+        const formattedCurrentDate = formatDate(currentDate.toString()).replace(/\//g, '.');
+        const today = new Date();
+        const formattedFromDate = formatDate(fromDate || '2024-12-07').replace(/\//g, '.');
+        const formattedToDate = formatDate(toDate || today.toISOString()).replace(/\//g, '.');
+
+        doc.setFontSize(18);
+        doc.text(title, 14, 20);
+        doc.setFontSize(12);
+        doc.text(`Izvještaj Generisan: ${formattedCurrentDate}`, 14, 30);
+        doc.text(`Podaci u periodu od ${formattedFromDate} do ${formattedToDate}`, 14, 40); // Period of the report
+
+        // Example content for the table
+        const tableColumn = ['Datum', 'Kada ID', 'Naziv Kade', 'Tip Grijaca', 'Vrijeme (sekunde)', 'Vrijeme (sati)'];
+        const tableRows = filteredLogs.map((log) => [
+            formatDate(log.created_at),
+            log.kada_id,
+            log.cardName || 'N/A',
+            log.heater_type,
+            log.duration_seconds,
+            convertSecondsToHours(log.duration_seconds),
+        ]);
+        tableRows.push(["", "", "", "", "Ukupno Sati:", totalHours]);
+
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 50, // Position table below the title
+            theme: "grid",
+        });
+
+        // Save PDF with custom filename
+        const fileName = `Izvještaj Rada Grijača.pdf`;
+        doc.save(fileName);
+    };
+
     const formatDate = (date: string): string => {
         const d = new Date(date);
         const day = String(d.getDate()).padStart(2, '0');
@@ -92,6 +133,15 @@ const ViewHeaterLogs: React.FC = () => {
         return `${day}/${month}/${year}`;
     };
 
+    // Helper function to rename heater types
+    const formatHeaterType = (type: string): string => {
+        if (type === 'elGrijac') {
+            return 'el. grijač';
+        }
+        return type; // No change for 'ventil'
+    };
+
+    // Convert seconds to hours (with two decimal places)
     const convertSecondsToHours = (seconds: number): string => {
         return (seconds / 3600).toFixed(2);
     };
@@ -102,30 +152,30 @@ const ViewHeaterLogs: React.FC = () => {
             <div className="sarza-nazad" style={{ marginBottom: '20px' }}>
                 <Link to="/nalozi-sarze">Nazad</Link>
             </div>
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+            <div style={{marginBottom: '20px', display: 'flex', gap: '10px'}}>
                 <input
                     type="text"
                     placeholder="Kada ID"
                     value={kadaId}
                     onChange={(e) => setKadaId(e.target.value)}
-                    style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', width: '150px' }}
+                    style={{padding: '10px', border: '1px solid #ddd', borderRadius: '4px', width: '150px'}}
                 />
                 <input
                     type="date"
                     value={fromDate}
                     onChange={(e) => setFromDate(e.target.value)}
-                    style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', width: '150px' }}
+                    style={{padding: '10px', border: '1px solid #ddd', borderRadius: '4px', width: '150px'}}
                 />
                 <input
                     type="date"
                     value={toDate}
                     onChange={(e) => setToDate(e.target.value)}
-                    style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', width: '150px' }}
+                    style={{padding: '10px', border: '1px solid #ddd', borderRadius: '4px', width: '150px'}}
                 />
                 <select
                     value={heaterType}
                     onChange={(e) => setHeaterType(e.target.value)}
-                    style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', width: '150px' }}
+                    style={{padding: '10px', border: '1px solid #ddd', borderRadius: '4px', width: '150px'}}
                 >
                     <option value="">Odaberi Grijač</option>
                     <option value="elGrijac">El. Grijač</option>
@@ -140,6 +190,7 @@ const ViewHeaterLogs: React.FC = () => {
                         backgroundColor: '#007BFF',
                         color: '#fff',
                         cursor: 'pointer',
+
                     }}
                 >
                     Primijeni Filter
@@ -157,6 +208,19 @@ const ViewHeaterLogs: React.FC = () => {
                         cursor: 'not-allowed',
                     }}
                 />
+                <button
+                    onClick={generatePDF}
+                    style={{
+                        padding: '10px 15px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        backgroundColor: '#28a745',
+                        color: '#fff',
+                        cursor: 'pointer',
+                    }}
+                >
+                    Generiši PDF
+                </button>
             </div>
             {loading && <p>Učitavanje podataka...</p>}
             {error && <p>Error: {error}</p>}
@@ -179,8 +243,17 @@ const ViewHeaterLogs: React.FC = () => {
                                 <td>{formatDate(log.created_at)}</td>
                                 <td>{log.kada_id}</td>
                                 <td>{log.cardName}</td>
-                                <td>{log.heater_type}</td>
-                                <td>{log.duration_seconds}</td>
+                                <td>{formatHeaterType(log.heater_type)}</td>
+                                <td>
+                                    {log.duration_seconds === 0 ?
+                                        `Upaljen od: - ${new Date(log.created_at).toLocaleTimeString([], {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            second: '2-digit',
+                                            hour12: false
+                                        })}`
+                                        : log.duration_seconds}
+                                </td>
                                 <td>{convertSecondsToHours(log.duration_seconds)}</td>
                             </tr>
                         ))}
