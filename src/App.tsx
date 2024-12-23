@@ -68,6 +68,7 @@ const App: React.FC = () => {
             setTemperatureData(fetchedData);
         } catch (error) {
             console.error('Error fetching temperature data:', error);
+            // alert("Greška u komunikaciji sa bazom!");
         }
     };
 
@@ -186,10 +187,7 @@ const App: React.FC = () => {
 
             <Route path="/notifications" element={
                 isLoggedIn ? (
-                    <div>
-
-                        <Notifications username={username}/>
-                    </div>
+                    <Notifications username={username}/>
                 ) : (
                     <InvalidLink />
                 )
@@ -205,7 +203,6 @@ const App: React.FC = () => {
             <Route path="/kompletiraj-sarzu" element={isLoggedIn ? <KompletirajSarzu /> : <InvalidLink />} />
             <Route path="/dodijeli-skart" element={isLoggedIn ? <CreateSkart /> : <InvalidLink />} />
             <Route path="/korisnici" element={isLoggedIn && role === 1 ? <Korisnici /> : <InvalidLink />} />
-            {/*<Route path="/notifications" element={isLoggedIn ? <Notifications /> : <InvalidLink />} />*/}
 
             <Route path="/signali" element={
                 <div className="signali">

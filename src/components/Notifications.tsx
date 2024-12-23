@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
     const [notifications, setNotifications] = useState<any[]>([]);
+    const [phValues, setPhValues] = useState<number[]>(Array(10).fill(0)); // Initial empty pH values array
+    const [isPhCollapsed, setIsPhCollapsed] = useState<boolean>(true); // Track collapsible state
 
     // Fetch notifications from the server
     const fetchNotifications = async () => {
@@ -15,69 +17,60 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
         }
     };
 
-    const markAsDone = async (id: number) => {
+    const markAsDone = async (id: number, notificationType: string) => {
+        if (notificationType === 'phCheck' && phValues.some(value => value === 0)) {
+            alert('Sva pH polja moraju biti popunjena s vrijednostima između 0 - 14.');
+            return;
+        }
+
         try {
             const response = await fetch(`/api/notifications/${id}/done`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username }), // Sending username instead of userId
+                body: JSON.stringify({ username, phValues: phValues }),
             });
 
             if (response.ok) {
-                alert('Notification marked as done');
-                await fetchNotifications(); // Refresh the list after marking as done
+                alert('Notifikacija označena završenom.');
+                await fetchNotifications(); // Refresh notifications after marking as done
             } else {
                 const errorData = await response.json();
-                alert(errorData.error || 'Failed to mark notification as done');
+                alert(errorData.error || 'Greška u kompletiranju notifikacije');
             }
         } catch (error) {
             console.error('Error marking notification as done:', error);
         }
     };
 
-    const dismissNotification = async (id: number) => {
-        try {
-            const response = await fetch(`/api/notifications/${id}/dismiss`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username }), // Sending username instead of userId
-            });
-
-            if (response.ok) {
-                alert('Notification dismissed');
-                await fetchNotifications(); // Refresh the list after dismissing
-            } else {
-                const errorData = await response.json();
-                alert(errorData.error || 'Failed to dismiss notification');
-            }
-        } catch (error) {
-            console.error('Error dismissing notification:', error);
-        }
+    // Handle pH input change
+    const handlePhChange = (index: number, value: string) => {
+        const updatedPhValues = [...phValues];
+        updatedPhValues[index] = parseFloat(value);
+        setPhValues(updatedPhValues);
     };
 
-    // Fetch notifications initially and set up polling for periodic refresh
+    const togglePhCollapse = () => {
+        setIsPhCollapsed(!isPhCollapsed);
+    };
+
     useEffect(() => {
-        // Fetch notifications on mount
         fetchNotifications();
 
-        // Set up polling to refresh notifications every 10 seconds
+        // Refresh notifications
         const interval = setInterval(() => {
             fetchNotifications();
-        }, 10000); // 10000 ms = 10 seconds
+        }, 60000); // 60000 ms = 60 seconds
 
-        // Clean up interval on component unmount
         return () => clearInterval(interval);
-    }, []); // Empty dependency array means this runs once when the component mounts
+    }, []);
 
     return (
         <div>
             <div className="admin-log">
                 <h1>OBAVIJESTI</h1>
-                <Link to="/" className="nazad" >Nazad</Link>
+                <Link to="/" className="nazad">Nazad</Link>
             </div>
             <ul>
                 {notifications.map((notification) => (
@@ -85,11 +78,44 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
                         <p>{notification.message}</p>
                         {!notification.done ? (
                             <>
-                                {notification.type === 'monthly' && (
-                                    <button onClick={() => markAsDone(notification.id)}>Označi završenim.</button>
+                                {notification.type === 'odrzavanje' && (
+                                    <button onClick={() => markAsDone(notification.id, notification.type)}>Označi završenim</button>
                                 )}
                                 {notification.type === 'phCheck' && (
-                                    <button onClick={() => dismissNotification(notification.id)}>Označi završenim.</button>
+                                    <div>
+                                        <h4>Unesite pH vrijednosti:</h4>
+                                        {/* Toggle Button for Collapsible Section */}
+                                        <button onClick={togglePhCollapse}>
+                                            {isPhCollapsed ? 'Prikaži pH Unose' : 'Sakrij pH Unose'}
+                                        </button>
+                                        {!isPhCollapsed && (
+                                            <div>
+                                                {Array.from({ length: 10 }).map((_, index) => (
+                                                    <div key={index}>
+                                                        <label>{`Kada ${index + 1}`}</label>
+                                                        <input
+                                                            type="number"
+                                                            value={phValues[index]}
+                                                            onChange={(e) => handlePhChange(index, e.target.value)}
+                                                            step="0.01"
+                                                            min="0"
+                                                            max="14"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <button onClick={() => markAsDone(notification.id, notification.type)}>Unesi pH Vrijednosti</button>
+                                    </div>
+                                )}
+                                {notification.type === 'daily' && (
+                                    <button onClick={() => markAsDone(notification.id, notification.type)}>Označi završenim</button>
+                                )}
+                                {notification.type === 'koncentracija' && (
+                                    <button onClick={() => markAsDone(notification.id, notification.type)}>Označi završenim</button>
+                                )}
+                                {notification.type === 'praznjenje' && (
+                                    <button onClick={() => markAsDone(notification.id, notification.type)}>Označi završenim</button>
                                 )}
                             </>
                         ) : null}

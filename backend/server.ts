@@ -293,7 +293,9 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/notifications', async (_req, res) => {
     try {
         // Fetch unread notifications from the database
-        const [notifications] = await db.query('SELECT * FROM notifications WHERE done = false');
+        const [notifications] : [RowDataPacket[], any] = await db.query(
+            'SELECT * FROM notifications WHERE done = false'
+        );
 
         // Check if notifications is an array
         if (!Array.isArray(notifications)) {
@@ -312,105 +314,203 @@ app.get('/api/notifications', async (_req, res) => {
     }
 });
 
-
 // @ts-ignore
 app.post('/api/notifications/:id/done', async (req, res) => {
     const { id } = req.params;
-    const { username } = req.body;
+    const { username, phValues } = req.body; // phValues sent from frontend
+
+    // Define a type for valid notification types
+    type NotificationType = 'daily' | 'phCheck' | 'odrzavanje' | 'praznjenje' | 'koncentracija';
 
     try {
-        const query = `
-            UPDATE notifications
-            SET done = true, markedBy = ?, doneAt = NOW()
-            WHERE id = ?`;
+        // Fetch the notification type
+        const [notificationRows]: [RowDataPacket[], any] = await db.query(
+            'SELECT type FROM notifications WHERE id = ?',
+            [id]
+        );
 
-        const [result]: any = await db.query(query, [username, id]);
-
-        if (result.affectedRows > 0) {
-            res.json({ success: true, message: 'Notification marked as done.' });
-        } else {
-            res.status(404).json({ error: 'Notification not found.' });
+        if (notificationRows.length === 0) {
+            return res.status(404).json({ error: 'Notification not found.' });
         }
+
+        const notificationType = notificationRows[0].type as NotificationType;
+
+        // If the notification is for phCheck, insert pH values
+        if (notificationType === 'phCheck' && Array.isArray(phValues) && phValues.length === 10) {
+            const query = `
+                INSERT INTO kada_ph
+                (markedBy, kada_1, kada_2, kada_3, kada_4, kada_5, kada_6, kada_7, kada_8, kada_9, kada_10)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            const values = [username, ...phValues];
+            await db.query(query, values);
+        } else if (notificationType === 'phCheck') {
+            // Handle invalid pH values
+            return res.status(400).json({ error: 'You must submit exactly 10 pH values.' });
+        }
+
+        // Mark the notification as done
+        const updateQuery = `
+            UPDATE notifications 
+            SET done = true, markedBy = ?, doneAt = NOW() 
+            WHERE id = ?
+        `;
+        const [result]: any = await db.query(updateQuery, [username, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Failed to mark notification as done.' });
+        }
+
+        // Schedule the next notification based on the type
+        const notificationDetails = {
+            daily: { intervalDays: 1, message: 'Potrebna provjera nivoa u kadama' },
+            phCheck: { intervalDays: 2, message: 'Potrebna provjera pH nivoa u kadama' },
+            odrzavanje: { intervalDays: 30, message: 'Potrebno mjesečno održavanje kada' },
+            praznjenje: { intervalDays: 30, message: 'Potrebno mjesečno pražnjenje kada' },
+            koncentracija: { intervalDays: 42, message: 'Potrebna provjera koncentracija u kadama' },
+        };
+
+        const { intervalDays, message } = notificationDetails[notificationType];
+
+        await scheduleNotification(notificationType, intervalDays, message);
+
+        res.json({ success: true, message: 'Notification marked as done and next scheduled.' });
     } catch (error) {
         console.error('Error marking notification as done:', error);
         res.status(500).json({ error: 'Failed to mark notification as done.' });
     }
 });
 
-app.post('/api/notifications/:id/dismiss', async (req, res) => {
-    const { id } = req.params;
-    const { username } = req.body;
+async function checkAndInsertMissingNotifications() {
+    const notificationTypes = ['daily', 'phCheck', 'odrzavanje', 'praznjenje', 'koncentracija'];
 
     try {
-        const query = `
-            UPDATE notifications
-            SET done = true, markedBy = ?, doneAt = NOW()
-            WHERE id = ?`;
+        for (const type of notificationTypes) {
+            // Check if any notification of this type exists in the database (done or not)
+            const [rows]: [RowDataPacket[], any] = await db.query(
+                'SELECT id FROM notifications WHERE type = ? LIMIT 1',
+                [type]
+            );
 
-        const [result]: any = await db.query(query, [username, id]);
-
-        if (result.affectedRows > 0) {
-            res.json({ success: true, message: 'Notification dismissed.' });
-        } else {
-            res.status(404).json({ error: 'Notification not found or cannot be dismissed.' });
+            if (rows.length === 0) {
+                // If no notification exists, insert one as "pending"
+                await db.query(
+                    'INSERT INTO notifications (message, type, created_at, doneAt, done) VALUES (?, ?, ?, ?, ?)',
+                    [getMessageForType(type), type, new Date(), null, false]
+                );
+                console.log(`Inserted initial notification for type: ${type}`);
+            }
         }
     } catch (error) {
-        console.error('Error dismissing notification:', error);
-        res.status(500).json({ error: 'Failed to dismiss notification.' });
+        console.error('Error checking and inserting missing notifications:', error);
     }
-});
+}
 
-async function scheduleNextNotification() {
+// Function to get the message for each notification type
+function getMessageForType(type: string) {
+    const messages: Record<string, string> = {
+        daily: 'Potrebna provjera nivoa u kadama',
+        phCheck: 'Potrebna provjera i unos pH nivoa u kadama',
+        odrzavanje: 'Potrebno mjesečno održavanje kada',
+        praznjenje: 'Potrebno mjesečno pražnjenje kada',
+        koncentracija: 'Potrebna provjera koncentracija u kadama'
+    };
+    return messages[type];
+}
+
+// Function to schedule notifications based on type and interval
+async function scheduleNotification(type: string, intervalDays: number, message: string) {
     try {
-        // Query the database for the latest 'doneAt' timestamp for 'monthly' notifications
-        const [rows]: [RowDataPacket[], any] = await db.query('SELECT doneAt FROM notifications WHERE type = ? ORDER BY doneAt DESC LIMIT 1', ['monthly']);
+        // Check for an incomplete notification of this type
+        const [rows]: [RowDataPacket[], any] = await db.query(
+            'SELECT id FROM notifications WHERE type = ? AND done = false LIMIT 1',
+            [type]
+        );
 
         if (rows.length > 0) {
-            // Extract doneAt timestamp from the result
-            const lastDoneAt = rows[0].doneAt;
-            const nextNotificationTime = new Date(lastDoneAt);
-            nextNotificationTime.setDate(nextNotificationTime.getDate() + 30); // Add 30 days to the last done time
+            console.log(`Pending notification already exists for type: ${type}. Skipping schedule.`);
+            return; // Skip scheduling if a pending notification already exists
+        }
 
-            // Calculate the cron schedule string (e.g., at midnight of the next notification date)
-            const cronTime = `${nextNotificationTime.getMinutes()} ${nextNotificationTime.getHours()} ${nextNotificationTime.getDate()} ${nextNotificationTime.getMonth() + 1} *`;
+        // Get the most recently completed notification for this type
+        const [completedRows]: [RowDataPacket[], any] = await db.query(
+            'SELECT doneAt FROM notifications WHERE type = ? ORDER BY doneAt DESC LIMIT 1',
+            [type]
+        );
 
-            // Schedule the cron job dynamically based on the calculated next time
-            cron.schedule(cronTime, async () => {
-                try {
-                    await db.query(
-                        `INSERT INTO notifications (message, type, created_at) VALUES (?, ?, ?)`,
-                        ['Mjesečno održavanje kada', 'monthly', new Date()]
-                    );
-                    console.log('Monthly maintenance notification created.');
-                } catch (error) {
-                    console.error('Error executing monthly cleaning cron job:', error);
-                }
-            });
+        let nextNotificationTime: Date;
+
+        if (completedRows.length > 0) {
+            const lastDoneAt = new Date(completedRows[0].doneAt);
+            nextNotificationTime = new Date(lastDoneAt);
+            nextNotificationTime.setDate(nextNotificationTime.getDate() + intervalDays); // Add interval days
         } else {
-            console.log('No previous monthly notifications found.');
-            await db.query(
-                `INSERT INTO notifications (message, type, created_at) VALUES (?, ?, ?)`,
-                ['Mjesečno održavanje kada', 'monthly', new Date()]
-            );
+            nextNotificationTime = new Date(); // No previous completion, schedule immediately
+        }
+        // Set notification to appear at noon, comment out for accurate time
+        nextNotificationTime.setHours(12, 0, 0, 0);
+        console.log(`Notification of type "${type}" scheduled for: ${nextNotificationTime.toLocaleString()}`);
+
+        const minute = nextNotificationTime.getMinutes();
+        const hour = nextNotificationTime.getHours();
+        const day = nextNotificationTime.getDate();
+        const month = nextNotificationTime.getMonth() + 1;
+        const weekday = '*';
+
+        const cronTime = `${minute} ${hour} ${day} ${month} ${weekday}`;
+
+        cron.schedule(cronTime, async () => {
+            console.log(`Cron job triggered for ${type} notification at: ${new Date().toLocaleString()}`);
+            try {
+                await db.query(
+                    'INSERT INTO notifications (message, type, created_at, doneAt, done) VALUES (?, ?, ?, ?, ?)',
+                    [message, type, new Date(), null, false]
+                );
+                console.log(`${type} notification created.`);
+            } catch (error) {
+                console.error(`Error creating ${type} notification:`, error);
+            }
+        });
+    } catch (error) {
+        console.error(`Error scheduling ${type} notification:`, error);
+    }
+}
+
+checkAndInsertMissingNotifications();
+
+app.post('/api/notifications/:id/phCheck', async (req, res) => {
+    const { id } = req.params;
+    const { username, phValues } = req.body; // phValues should contain pH values for 10 kadas
+
+    try {
+        // Insert pH values into the kada_ph table
+        const query = `
+            INSERT INTO kada_ph (kada_1, kada_2, kada_3, kada_4, kada_5, kada_6, kada_7, kada_8, kada_9, kada_10, user)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+        await db.query(query, [
+            ...phValues, username
+        ]);
+
+        // Mark the notification as done
+        const updateQuery = `
+            UPDATE notifications
+            SET done = true, markedBy = ?, doneAt = NOW()
+            WHERE id = ? AND type = 'phCheck'`;
+
+        const [result]: any = await db.query(updateQuery, [username, id]);
+
+        if (result.affectedRows > 0) {
+            res.json({ success: true, message: 'Notification marked as done with pH values.' });
+        } else {
+            res.status(404).json({ error: 'Notification not found or cannot be marked as done.' });
         }
     } catch (error) {
-        console.error('Error fetching last done timestamp:', error);
-    }
-
-}
-scheduleNextNotification();
-
-// @ts-ignore
-cron.schedule('0 0 * * *', async () => {
-    try {
-        await db.query(
-            `INSERT INTO notifications (message, type, created_at) VALUES (?, ?, ?)`,
-            ['Potrebna provjera pH nivoa u kadama', 'phCheck', new Date()]
-        );
-    } catch (error) {
-        console.error('Error executing pH check cron job:', error);
+        console.error('Error processing pH values:', error);
+        res.status(500).json({ error: 'Failed to submit pH values' });
     }
 });
+
 
 app.get('/api/nalogs/incomplete', async (_req, res) => {
     try {
@@ -584,12 +684,6 @@ app.post('/api/sarzas', async (req, res) => {
                 nalog_id,
             ]
         );
-        // Add šarža to heater_log table
-        // const insertLogQuery = `
-        //     INSERT INTO heater_log (sarza_id, kada_id, elGrijac_duration, ventil_duration, last_updated)
-        //     VALUES (?, ?, 0, 0, NOW())
-        //     `;
-        // await connection.execute(insertLogQuery, [result.insertId, kada_id]);
 
         await connection.commit();
         res.json({ message: 'Šarza Uspješno Kreirana: ', id: result.insertId });
@@ -1056,8 +1150,6 @@ app.put('/api/sarzas/:id/complete', async (req, res) => {
     }
 });
 
-
-
 // @ts-ignore
 app.put('/api/nalogs/:id/complete', async (req, res) => {
     const { id } = req.params;  // Get the nalog ID from the route parameter
@@ -1105,7 +1197,6 @@ app.get('/api/sarzas/incomplete/:nalogId', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
-
 
 // Start the server
 app.listen(port, () => {

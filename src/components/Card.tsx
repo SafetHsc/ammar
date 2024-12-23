@@ -1,6 +1,6 @@
 import React from "react";
-import grijacOn from "../../public/grijacON.png";
-import grijacOff from "../../public/grijacOff.jpg";
+import grijacOn from "/grijacON.png";
+import grijacOff from "/grijacOff.jpg";
 
 interface CardProps {
     id: number;
