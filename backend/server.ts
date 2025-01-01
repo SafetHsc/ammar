@@ -320,7 +320,7 @@ app.post('/api/notifications/:id/done', async (req, res) => {
     const { username, phValues } = req.body; // phValues sent from frontend
 
     // Define a type for valid notification types
-    type NotificationType = 'daily' | 'phCheck' | 'odrzavanje' | 'praznjenje' | 'koncentracija';
+    type NotificationType = 'nivo' | 'phCheck' | 'odrzavanje' | 'praznjenje' | 'koncentracija';
 
     try {
         // Fetch the notification type
@@ -363,7 +363,7 @@ app.post('/api/notifications/:id/done', async (req, res) => {
 
         // Schedule the next notification based on the type
         const notificationDetails = {
-            daily: { intervalDays: 1, message: 'Potrebna provjera nivoa u kadama' },
+            nivo: { intervalDays: 1, message: 'Potrebna provjera nivoa u kadama' },
             phCheck: { intervalDays: 2, message: 'Potrebna provjera pH nivoa u kadama' },
             odrzavanje: { intervalDays: 30, message: 'Potrebno mjesečno održavanje kada' },
             praznjenje: { intervalDays: 30, message: 'Potrebno mjesečno pražnjenje kada' },
@@ -381,109 +381,11 @@ app.post('/api/notifications/:id/done', async (req, res) => {
     }
 });
 
-async function checkAndInsertMissingNotifications() {
-    const notificationTypes = ['daily', 'phCheck', 'odrzavanje', 'praznjenje', 'koncentracija'];
-
-    try {
-        for (const type of notificationTypes) {
-            // Check if any notification of this type exists in the database (done or not)
-            const [rows]: [RowDataPacket[], any] = await db.query(
-                'SELECT id FROM notifications WHERE type = ? LIMIT 1',
-                [type]
-            );
-
-            if (rows.length === 0) {
-                // If no notification exists, insert one as "pending"
-                await db.query(
-                    'INSERT INTO notifications (message, type, created_at, doneAt, done) VALUES (?, ?, ?, ?, ?)',
-                    [getMessageForType(type), type, new Date(), null, false]
-                );
-                console.log(`Inserted initial notification for type: ${type}`);
-            }
-        }
-    } catch (error) {
-        console.error('Error checking and inserting missing notifications:', error);
-    }
-}
-
-// Function to get the message for each notification type
-function getMessageForType(type: string) {
-    const messages: Record<string, string> = {
-        daily: 'Potrebna provjera nivoa u kadama',
-        phCheck: 'Potrebna provjera i unos pH nivoa u kadama',
-        odrzavanje: 'Potrebno mjesečno održavanje kada',
-        praznjenje: 'Potrebno mjesečno pražnjenje kada',
-        koncentracija: 'Potrebna provjera koncentracija u kadama'
-    };
-    return messages[type];
-}
-
-// Function to schedule notifications based on type and interval
-async function scheduleNotification(type: string, intervalDays: number, message: string) {
-    try {
-        // Check for an incomplete notification of this type
-        const [rows]: [RowDataPacket[], any] = await db.query(
-            'SELECT id FROM notifications WHERE type = ? AND done = false LIMIT 1',
-            [type]
-        );
-
-        if (rows.length > 0) {
-            console.log(`Pending notification already exists for type: ${type}. Skipping schedule.`);
-            return; // Skip scheduling if a pending notification already exists
-        }
-
-        // Get the most recently completed notification for this type
-        const [completedRows]: [RowDataPacket[], any] = await db.query(
-            'SELECT doneAt FROM notifications WHERE type = ? ORDER BY doneAt DESC LIMIT 1',
-            [type]
-        );
-
-        let nextNotificationTime: Date;
-
-        if (completedRows.length > 0) {
-            const lastDoneAt = new Date(completedRows[0].doneAt);
-            nextNotificationTime = new Date(lastDoneAt);
-            nextNotificationTime.setDate(nextNotificationTime.getDate() + intervalDays); // Add interval days
-        } else {
-            nextNotificationTime = new Date(); // No previous completion, schedule immediately
-        }
-        // Set notification to appear at noon, comment out for accurate time
-        nextNotificationTime.setHours(12, 0, 0, 0);
-        console.log(`Notification of type "${type}" scheduled for: ${nextNotificationTime.toLocaleString()}`);
-
-        const minute = nextNotificationTime.getMinutes();
-        const hour = nextNotificationTime.getHours();
-        const day = nextNotificationTime.getDate();
-        const month = nextNotificationTime.getMonth() + 1;
-        const weekday = '*';
-
-        const cronTime = `${minute} ${hour} ${day} ${month} ${weekday}`;
-
-        cron.schedule(cronTime, async () => {
-            console.log(`Cron job triggered for ${type} notification at: ${new Date().toLocaleString()}`);
-            try {
-                await db.query(
-                    'INSERT INTO notifications (message, type, created_at, doneAt, done) VALUES (?, ?, ?, ?, ?)',
-                    [message, type, new Date(), null, false]
-                );
-                console.log(`${type} notification created.`);
-            } catch (error) {
-                console.error(`Error creating ${type} notification:`, error);
-            }
-        });
-    } catch (error) {
-        console.error(`Error scheduling ${type} notification:`, error);
-    }
-}
-
-checkAndInsertMissingNotifications();
-
 app.post('/api/notifications/:id/phCheck', async (req, res) => {
     const { id } = req.params;
-    const { username, phValues } = req.body; // phValues should contain pH values for 10 kadas
+    const { username, phValues } = req.body;
 
     try {
-        // Insert pH values into the kada_ph table
         const query = `
             INSERT INTO kada_ph (kada_1, kada_2, kada_3, kada_4, kada_5, kada_6, kada_7, kada_8, kada_9, kada_10, user)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -492,7 +394,6 @@ app.post('/api/notifications/:id/phCheck', async (req, res) => {
             ...phValues, username
         ]);
 
-        // Mark the notification as done
         const updateQuery = `
             UPDATE notifications
             SET done = true, markedBy = ?, doneAt = NOW()
@@ -511,6 +412,128 @@ app.post('/api/notifications/:id/phCheck', async (req, res) => {
     }
 });
 
+async function scheduleNotificationsOnStartup() {
+    const notificationDetails = {
+        nivo: { intervalDays: 1, message: 'Potrebna provjera nivoa u kadama' },
+        phCheck: { intervalDays: 2, message: 'Potrebna provjera pH nivoa u kadama' },
+        odrzavanje: { intervalDays: 30, message: 'Potrebno mjesečno održavanje kada' },
+        praznjenje: { intervalDays: 30, message: 'Potrebno mjesečno pražnjenje kada' },
+        koncentracija: { intervalDays: 42, message: 'Potrebna provjera koncentracija u kadama' },
+    };
+
+    for (const [type, { intervalDays, message }] of Object.entries(notificationDetails)) {
+        await scheduleNotification(type, intervalDays, message);
+    }
+}
+
+async function scheduleNotification(type: string, intervalDays: number, message: string) {
+    try {
+        // Check if a pending notification of this type already exists
+        const [pendingRows]: [RowDataPacket[], any] = await db.query(
+            'SELECT COUNT(*) AS pendingCount FROM notifications WHERE type = ? AND done = false',
+            [type]
+        );
+
+        if (pendingRows[0].pendingCount > 0) {
+            console.log(`Notification of type "${type}" already pending, skipping scheduling.`);
+            return; // Skip scheduling if a pending notification exists
+        }
+
+        // Get the most recently completed notification for this type
+        const [completedRows]: [RowDataPacket[], any] = await db.query(
+            'SELECT doneAt FROM notifications WHERE type = ? ORDER BY doneAt DESC LIMIT 1',
+            [type]
+        );
+
+        let nextNotificationTime: Date;
+
+        if (completedRows.length > 0) {
+            const lastDoneAt = new Date(completedRows[0].doneAt);
+            nextNotificationTime = new Date(lastDoneAt);
+            nextNotificationTime.setDate(nextNotificationTime.getDate() + intervalDays);
+        } else {
+            // No previous completion, schedule from today
+            nextNotificationTime = new Date();
+        }
+
+        // Set to 12:00:00
+        nextNotificationTime.setHours(12, 0, 0, 0);
+
+        const now = new Date();
+
+        // If the next scheduled time has already passed, schedule immediately
+        if (nextNotificationTime <= now) {
+            console.log(`Notification of type "${type}" missed its scheduled time (${nextNotificationTime.toLocaleString()}).`);
+
+            // Directly trigger the notification
+            await triggerNotification(type, message);
+            return;
+        } else {
+            console.log(`Notification of type "${type}" is scheduled for ${nextNotificationTime.toLocaleString()}`);
+        }
+
+        // Schedule notification via cron
+        const minute = nextNotificationTime.getMinutes();
+        const hour = nextNotificationTime.getHours();
+        const day = nextNotificationTime.getDate();
+        const month = nextNotificationTime.getMonth() + 1;
+        const weekday = '*';
+
+        const cronTime = `${minute} ${hour} ${day} ${month} ${weekday}`;
+
+        cron.schedule(cronTime, async () => {
+            console.log(`Cron job triggered for ${type} notification at: ${new Date().toLocaleString()}`);
+            try {
+                // Double-check for pending notifications
+                const [pendingCheck]: [RowDataPacket[], any] = await db.query(
+                    'SELECT COUNT(*) AS pendingCount FROM notifications WHERE type = ? AND done = false',
+                    [type]
+                );
+
+                if (pendingCheck[0].pendingCount > 0) {
+                    console.log(`Notification of type "${type}" already pending, skipping creation.`);
+                    return;
+                }
+
+                // Insert the new notification
+                const [result]: [ResultSetHeader, FieldPacket[]] = await db.query(
+                    'INSERT INTO notifications (message, type, created_at, doneAt, done) VALUES (?, ?, ?, ?, ?)',
+                    [message, type, new Date(), null, false]
+                );
+
+                if (result.affectedRows > 0) {
+                    console.log(`Notification of type "${type}" successfully created.`);
+                } else {
+                    console.error(`Failed to insert notification of type "${type}".`);
+                }
+            } catch (error) {
+                console.error(`Error creating ${type} notification:`, error);
+            }
+        });
+    } catch (error) {
+        console.error(`Error scheduling ${type} notification:`, error);
+    }
+}
+
+async function triggerNotification(type: string, message: string) {
+    try {
+
+        const [result]: [ResultSetHeader, FieldPacket[]] = await db.query(
+            'INSERT INTO notifications (message, type, created_at, doneAt, done) VALUES (?, ?, ?, ?, ?)',
+            [message, type, new Date(), null, false]
+        );
+
+        if (result.affectedRows > 0) {
+            console.log(`Notification of type "${type}" successfully inserted immediately.`);
+        } else {
+            console.error(`Failed to insert notification of type "${type}".`);
+        }
+    } catch (error) {
+        console.error(`Error triggering ${type} notification:`, error);
+    }
+}
+
+scheduleNotificationsOnStartup();
 
 app.get('/api/nalogs/incomplete', async (_req, res) => {
     try {

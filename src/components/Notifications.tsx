@@ -108,7 +108,7 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
                                         <button onClick={() => markAsDone(notification.id, notification.type)}>Unesi pH Vrijednosti</button>
                                     </div>
                                 )}
-                                {notification.type === 'daily' && (
+                                {notification.type === 'nivo' && (
                                     <button onClick={() => markAsDone(notification.id, notification.type)}>Označi završenim</button>
                                 )}
                                 {notification.type === 'koncentracija' && (
