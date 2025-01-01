@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
+import Modal from "./Modal.tsx";
 
 const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
     const [notifications, setNotifications] = useState<any[]>([]);
-    const [phValues, setPhValues] = useState<number[]>(Array(10).fill(0)); // Initial empty pH values array
-    const [isPhCollapsed, setIsPhCollapsed] = useState<boolean>(true); // Track collapsible state
+    const [phValues, setPhValues] = useState<number[]>(Array(10).fill(0));
+    const [isPhModalOpen, setIsPhModalOpen] = useState<boolean>(false);
+    const [currentNotificationId, setCurrentNotificationId] = useState<number | null>(null);
 
-    // Fetch notifications from the server
     const fetchNotifications = async () => {
         try {
             const response = await fetch('/api/notifications');
@@ -29,12 +30,14 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username, phValues: phValues }),
+                body: JSON.stringify({ username, phValues }),
             });
 
             if (response.ok) {
                 alert('Notifikacija označena završenom.');
-                await fetchNotifications(); // Refresh notifications after marking as done
+                await fetchNotifications();
+                setIsPhModalOpen(false);
+                setCurrentNotificationId(null);
             } else {
                 const errorData = await response.json();
                 alert(errorData.error || 'Greška u kompletiranju notifikacije');
@@ -44,54 +47,50 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
         }
     };
 
-    // Handle pH input change
     const handlePhChange = (index: number, value: string) => {
         const updatedPhValues = [...phValues];
         updatedPhValues[index] = parseFloat(value);
         setPhValues(updatedPhValues);
     };
 
-    const togglePhCollapse = () => {
-        setIsPhCollapsed(!isPhCollapsed);
-    };
-
     useEffect(() => {
         fetchNotifications();
 
-        // Refresh notifications
         const interval = setInterval(() => {
             fetchNotifications();
-        }, 60000); // 60000 ms = 60 seconds
+        }, 60000);
 
         return () => clearInterval(interval);
     }, []);
 
     return (
-        <div>
-            <div className="admin-log">
+        <div className="notifications-container">
+            {/* Header Section */}
+            <div className="notifications-header">
                 <h1>OBAVIJESTI</h1>
                 <Link to="/" className="nazad">Nazad</Link>
             </div>
-            <ul>
-                {notifications.map((notification) => (
-                    <li key={notification.id}>
-                        <p>{notification.message}</p>
-                        {!notification.done ? (
-                            <>
-                                {notification.type === 'odrzavanje' && (
-                                    <button onClick={() => markAsDone(notification.id, notification.type)}>Označi završenim</button>
-                                )}
-                                {notification.type === 'phCheck' && (
-                                    <div>
-                                        <h4>Unesite pH vrijednosti:</h4>
-                                        {/* Toggle Button for Collapsible Section */}
-                                        <button onClick={togglePhCollapse}>
-                                            {isPhCollapsed ? 'Prikaži pH Unose' : 'Sakrij pH Unose'}
-                                        </button>
-                                        {!isPhCollapsed && (
-                                            <div>
+
+            {/* Notifications Box */}
+            <div className="notifications-box">
+                <ul>
+                    {notifications.map((notification) => (
+                        <li key={notification.id}>
+                            <p>{notification.message}</p>
+                            {!notification.done ? (
+                                <>
+                                    {notification.type === 'phCheck' && (
+                                        <>
+                                            <button onClick={() => {
+                                                setIsPhModalOpen(true);
+                                                setCurrentNotificationId(notification.id);
+                                            }}>
+                                                Unesi pH Vrijednosti
+                                            </button>
+                                            <Modal isOpen={isPhModalOpen} onClose={() => setIsPhModalOpen(false)}>
+                                                <h3>Unesite pH vrijednosti:</h3>
                                                 {Array.from({ length: 10 }).map((_, index) => (
-                                                    <div key={index}>
+                                                    <div key={index} className="kada-ph-row">
                                                         <label>{`Kada ${index + 1}`}</label>
                                                         <input
                                                             type="number"
@@ -103,25 +102,29 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
                                                         />
                                                     </div>
                                                 ))}
-                                            </div>
-                                        )}
-                                        <button onClick={() => markAsDone(notification.id, notification.type)}>Unesi pH Vrijednosti</button>
-                                    </div>
-                                )}
-                                {notification.type === 'nivo' && (
-                                    <button onClick={() => markAsDone(notification.id, notification.type)}>Označi završenim</button>
-                                )}
-                                {notification.type === 'koncentracija' && (
-                                    <button onClick={() => markAsDone(notification.id, notification.type)}>Označi završenim</button>
-                                )}
-                                {notification.type === 'praznjenje' && (
-                                    <button onClick={() => markAsDone(notification.id, notification.type)}>Označi završenim</button>
-                                )}
-                            </>
-                        ) : null}
-                    </li>
-                ))}
-            </ul>
+                                                <button
+                                                    onClick={() => {
+                                                        if (currentNotificationId !== null) {
+                                                            markAsDone(currentNotificationId, notification.type);
+                                                        }
+                                                    }}
+                                                >
+                                                    Označi završenim
+                                                </button>
+                                            </Modal>
+                                        </>
+                                    )}
+                                    {notification.type !== 'phCheck' && (
+                                        <button onClick={() => markAsDone(notification.id, notification.type)}>
+                                            Označi završenim
+                                        </button>
+                                    )}
+                                </>
+                            ) : null}
+                        </li>
+                    ))}
+                </ul>
+            </div>
         </div>
     );
 };
