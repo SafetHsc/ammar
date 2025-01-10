@@ -64,7 +64,7 @@ const ViewSarza: React.FC = () => {
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentSarzas = filteredSarzas.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(filteredSarzas.length / itemsPerPage);
+    const totalPages = Math.max(Math.ceil(filteredSarzas.length / itemsPerPage), 1);
 
     const handlePreviousPage = () => {
         if (currentPage > 1) setCurrentPage(currentPage - 1);

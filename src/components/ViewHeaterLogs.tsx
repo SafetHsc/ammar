@@ -90,7 +90,7 @@ const ViewHeaterLogs: React.FC = () => {
         const doc = new jsPDF();
         const title = 'Izvjestaj Rada Grijaca';
         const currentDate = new Date().toLocaleDateString();
-        const formattedCurrentDate = formatDate(currentDate.toString()).replace(/\//g, '.');
+        // const formattedCurrentDate = formatDate(currentDate.toString()).replace(/\//g, '.');
         const today = new Date();
         const formattedFromDate = formatDate(fromDate || '2024-12-07').replace(/\//g, '.');
         const formattedToDate = formatDate(toDate || today.toISOString()).replace(/\//g, '.');
@@ -98,7 +98,7 @@ const ViewHeaterLogs: React.FC = () => {
         doc.setFontSize(18);
         doc.text(title, 14, 20);
         doc.setFontSize(12);
-        doc.text(`Izvještaj Generisan: ${formattedCurrentDate}`, 14, 30);
+        doc.text(`Izvještaj Generisan: ${formatDate(currentDate)}`, 14, 30);
         doc.text(`Podaci u periodu od ${formattedFromDate} do ${formattedToDate}`, 14, 40); // Period of the report
 
         // Example content for the table

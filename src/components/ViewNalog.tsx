@@ -60,7 +60,7 @@ const ViewNalog: React.FC = () => {
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentNalogs = filteredNalogs.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(filteredNalogs.length / itemsPerPage);
+    const totalPages = Math.max(Math.ceil(filteredNalogs.length / itemsPerPage), 1);
 
     const handlePreviousPage = () => {
         if (currentPage > 1) setCurrentPage(currentPage - 1);

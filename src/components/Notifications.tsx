@@ -19,9 +19,14 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
     };
 
     const markAsDone = async (id: number, notificationType: string) => {
-        if (notificationType === 'phCheck' && phValues.some(value => value === 0)) {
-            alert('Sva pH polja moraju biti popunjena s vrijednostima između 0 - 14.');
-            return;
+        // Check if any pH values are invalid when submitting
+        if (notificationType === 'phCheck') {
+            const isValidPh = phValues.every(value => value >= 0 && value <= 14);
+
+            if (!isValidPh) {
+                alert('Sva pH polja moraju biti između 0 i 14.');
+                return;
+            }
         }
 
         try {
@@ -62,7 +67,6 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
 
         return () => clearInterval(interval);
     }, []);
-
     return (
         <div className="notifications-container">
             {/* Header Section */}
@@ -71,60 +75,73 @@ const Notifications: React.FC<{ username: string | null }> = ({ username }) => {
                 <Link to="/" className="nazad">Nazad</Link>
             </div>
 
-            {/* Notifications Box */}
-            <div className="notifications-box">
-                <ul>
-                    {notifications.map((notification) => (
-                        <li key={notification.id}>
-                            <p>{notification.message}</p>
-                            {!notification.done ? (
-                                <>
-                                    {notification.type === 'phCheck' && (
-                                        <>
-                                            <button onClick={() => {
-                                                setIsPhModalOpen(true);
-                                                setCurrentNotificationId(notification.id);
-                                            }}>
-                                                Unesi pH Vrijednosti
-                                            </button>
-                                            <Modal isOpen={isPhModalOpen} onClose={() => setIsPhModalOpen(false)}>
-                                                <h3>Unesite pH vrijednosti:</h3>
-                                                {Array.from({ length: 10 }).map((_, index) => (
-                                                    <div key={index} className="kada-ph-row">
-                                                        <label>{`Kada ${index + 1}`}</label>
-                                                        <input
-                                                            type="number"
-                                                            value={phValues[index]}
-                                                            onChange={(e) => handlePhChange(index, e.target.value)}
-                                                            step="0.01"
-                                                            min="0"
-                                                            max="14"
-                                                        />
-                                                    </div>
-                                                ))}
+            {/* Notifications Content */}
+            {notifications.length > 0 ? (
+                <div className="notifications-box">
+                    <ul>
+                        {notifications.map((notification) => (
+                            <li key={notification.id}>
+                                <p>{notification.message}</p>
+                                {!notification.done ? (
+                                    <>
+                                        {notification.type === 'phCheck' && (
+                                            <>
                                                 <button
                                                     onClick={() => {
-                                                        if (currentNotificationId !== null) {
-                                                            markAsDone(currentNotificationId, notification.type);
-                                                        }
+                                                        setIsPhModalOpen(true);
+                                                        setCurrentNotificationId(notification.id);
                                                     }}
                                                 >
-                                                    Označi završenim
+                                                    Unos pH Vrijednosti
                                                 </button>
-                                            </Modal>
-                                        </>
-                                    )}
-                                    {notification.type !== 'phCheck' && (
-                                        <button onClick={() => markAsDone(notification.id, notification.type)}>
-                                            Označi završenim
-                                        </button>
-                                    )}
-                                </>
-                            ) : null}
-                        </li>
-                    ))}
-                </ul>
-            </div>
+                                                <Modal
+                                                    isOpen={isPhModalOpen}
+                                                    onClose={() => setIsPhModalOpen(false)}
+                                                >
+                                                    <h3>Unesite pH vrijednosti:</h3>
+                                                    {Array.from({ length: 10 }).map((_, index) => (
+                                                        <div key={index} className="kada-ph-row">
+                                                            <label>{`Kada ${index + 1}`}</label>
+                                                            <input
+                                                                type="number"
+                                                                value={phValues[index]}
+                                                                onChange={(e) =>
+                                                                    handlePhChange(index, e.target.value)
+                                                                }
+                                                                step="0.01"
+                                                                min="0"
+                                                                max="14"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                    <button
+                                                        onClick={() => {
+                                                            if (currentNotificationId !== null) {
+                                                                markAsDone(currentNotificationId, notification.type);
+                                                            }
+                                                        }}
+                                                    >
+                                                        Unesi pH vrijednosti
+                                                    </button>
+                                                </Modal>
+                                            </>
+                                        )}
+                                        {notification.type !== 'phCheck' && (
+                                            <button onClick={() => markAsDone(notification.id, notification.type)}>
+                                                Označi završenim
+                                            </button>
+                                        )}
+                                    </>
+                                ) : null}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            ) : (
+                <div className="no-notifications">
+                    <p>Trenutno nema novih obavijesti.</p>
+                </div>
+            )}
         </div>
     );
 };
